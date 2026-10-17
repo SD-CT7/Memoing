@@ -1,233 +1,157 @@
-const SOURCE_URL =
-  "https://ctwwrooms.sddazo-0320.workers.dev/";
 
-const RETENTION_SECONDS = 7 * 24 * 60 * 60;
+const COLLECTOR_URL =
+  "https://ctww-room-collector.sddazo-0320.workers.dev";
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type",
-};
+const playerInput = document.getElementById("playerName");
+const saveButton = document.getElementById("savePlayer");
+const playerStatus = document.getElementById("playerStatus");
+const enablePushButton = document.getElementById("enablePush");
+const pushStatus = document.getElementById("pushStatus");
 
-function jsonResponse(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      ...CORS_HEADERS,
-      "Content-Type": "application/json; charset=utf-8",
-      "Cache-Control": "no-store",
-    },
-  });
+const PLAYER_STORAGE_KEY = "ctwwRoomMonitorPlayerName";
+
+function getPlayerName() {
+  return playerInput.value.trim();
 }
 
-async function collectSnapshot(env) {
-  const fetchedAt = Math.floor(Date.now() / 1000);
+function setPlayerStatus(message) {
+  if (playerStatus) playerStatus.textContent = message;
+}
 
-  const response = await fetch(SOURCE_URL, {
-    headers: { Accept: "application/json" },
-  });
+function setPushStatus(message) {
+  if (pushStatus) pushStatus.textContent = message;
+}
+
+function base64UrlToUint8Array(base64Url) {
+  const padding = "=".repeat((4 - (base64Url.length % 4)) % 4);
+  const base64 = (base64Url + padding)
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+
+  const raw = atob(base64);
+  return Uint8Array.from(raw, (char) => char.charCodeAt(0));
+}
+
+async function getVapidPublicKey() {
+  const response = await fetch(
+    `${COLLECTOR_URL}/api/vapid-public-key`
+  );
 
   if (!response.ok) {
-    throw new Error(
-      `Source API returned HTTP ${response.status}`
-    );
+    throw new Error(`公開鍵の取得に失敗しました (HTTP ${response.status})`);
   }
 
-  const payload = await response.text();
-  JSON.parse(payload);
+  const result = await response.json();
 
-  await env.DB.prepare(
-    `INSERT INTO room_snapshots (fetched_at, payload)
-     VALUES (?, ?)`
-  ).bind(fetchedAt, payload).run();
+  if (!result.publicKey) {
+    throw new Error("VAPID公開鍵が返されませんでした。");
+  }
 
-  await env.DB.prepare(
-    `DELETE FROM room_snapshots WHERE fetched_at < ?`
-  ).bind(fetchedAt - RETENTION_SECONDS).run();
-
-  console.log(
-    `Snapshot saved at ${fetchedAt}; bytes=${
-      new TextEncoder().encode(payload).length
-    }`
-  );
+  return result.publicKey;
 }
 
-export default {
-  async scheduled(controller, env, ctx) {
-    await collectSnapshot(env);
-  },
+async function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    throw new Error("このブラウザーはService Workerに対応していません。");
+  }
 
-  async fetch(request, env) {
-    const url = new URL(request.url);
+  if (!window.isSecureContext) {
+    throw new Error("HTTPSで公開されたサイトを開いてください。");
+  }
 
-    if (request.method === "OPTIONS") {
-      return new Response(null, {
-        status: 204,
-        headers: CORS_HEADERS,
-      });
+  await navigator.serviceWorker.register("/sw.js");
+  return await navigator.serviceWorker.ready;
+}
+
+// プレイヤー名を保存
+saveButton?.addEventListener("click", () => {
+  const playerName = getPlayerName();
+
+  if (!playerName) {
+    setPlayerStatus("プレイヤー名を入力してください。");
+    return;
+  }
+
+  localStorage.setItem(PLAYER_STORAGE_KEY, playerName);
+  setPlayerStatus(`監視対象を「${playerName}」に設定しました。`);
+});
+
+// 保存済みのプレイヤー名を復元
+const savedPlayerName = localStorage.getItem(PLAYER_STORAGE_KEY);
+
+if (savedPlayerName && playerInput) {
+  playerInput.value = savedPlayerName;
+}
+
+// プッシュ通知を有効化し、購読情報をCloudflareに保存
+enablePushButton?.addEventListener("click", async () => {
+  try {
+    if (!("PushManager" in window) || !("Notification" in window)) {
+      throw new Error("このブラウザーはプッシュ通知に対応していません。");
     }
 
-    if (
-      request.method === "GET" &&
-      url.pathname === "/api/vapid-public-key"
-    ) {
-      return jsonResponse({
-        publicKey: env.VAPID_PUBLIC_KEY,
-      });
+    const playerName = getPlayerName();
+
+    if (!playerName) {
+      throw new Error("先にプレイヤー名を入力してください。");
     }
 
-    if (
-      request.method === "POST" &&
-      url.pathname === "/api/subscribe"
-    ) {
-      try {
-        const body = await request.json();
+    enablePushButton.disabled = true;
+    setPushStatus("通知の準備をしています…");
 
-        const playerName =
-          typeof body.playerName === "string"
-            ? body.playerName.trim()
-            : "";
+    const permission = await Notification.requestPermission();
 
-        const subscription = body.subscription;
-        const endpoint = subscription?.endpoint;
-        const p256dh = subscription?.keys?.p256dh;
-        const auth = subscription?.keys?.auth;
-
-        if (
-          !playerName ||
-          playerName.length > 100 ||
-          typeof endpoint !== "string" ||
-          typeof p256dh !== "string" ||
-          typeof auth !== "string" ||
-          !endpoint.startsWith("https://") ||
-          endpoint.length > 4096 ||
-          p256dh.length > 200 ||
-          auth.length > 200
-        ) {
-          return jsonResponse(
-            { error: "Invalid player name or subscription" },
-            400
-          );
-        }
-
-        await env.DB.prepare(
-          `INSERT INTO push_subscriptions
-            (player_name, endpoint, p256dh, auth, created_at)
-           VALUES (?, ?, ?, ?, ?)
-           ON CONFLICT(endpoint) DO UPDATE SET
-             player_name = excluded.player_name,
-             p256dh = excluded.p256dh,
-             auth = excluded.auth`
-        ).bind(
-          playerName,
-          endpoint,
-          p256dh,
-          auth,
-          Math.floor(Date.now() / 1000)
-        ).run();
-
-        return jsonResponse({
-          success: true,
-          message: "Subscription saved",
-        });
-      } catch (error) {
-        console.error("Subscription save failed:", error);
-
-        return jsonResponse(
-          { error: "Invalid request or database error" },
-          400
-        );
-      }
-    }
-
-    if (request.method !== "GET") {
-      return jsonResponse(
-        { error: "Method not allowed" },
-        405
+    if (permission !== "granted") {
+      throw new Error(
+        permission === "denied"
+          ? "通知がブロックされています。ブラウザーのサイト設定を確認してください。"
+          : "通知の許可が選択されませんでした。"
       );
     }
 
-    try {
-      if (url.pathname === "/health") {
-        return jsonResponse({
-          status: "ok",
-          collector: "ctww-room-collector",
-        });
-      }
+    const registration = await registerServiceWorker();
+    let subscription = await registration.pushManager.getSubscription();
 
-      if (url.pathname === "/api/latest") {
-        const row = await env.DB.prepare(
-          `SELECT id, fetched_at, payload
-           FROM room_snapshots
-           ORDER BY fetched_at DESC, id DESC
-           LIMIT 1`
-        ).first();
+    if (!subscription) {
+      const publicKey = await getVapidPublicKey();
 
-        if (!row) {
-          return jsonResponse(
-            { error: "No snapshots yet" },
-            404
-          );
-        }
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: base64UrlToUint8Array(publicKey),
+      });
+    }
 
-        return jsonResponse({
-          id: row.id,
-          fetched_at: row.fetched_at,
-          data: JSON.parse(row.payload),
-        });
-      }
+    const response = await fetch(`${COLLECTOR_URL}/api/subscribe`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        playerName,
+        subscription: subscription.toJSON(),
+      }),
+    });
 
-      if (url.pathname === "/api/history") {
-        const requestedLimit = Number(
-          url.searchParams.get("limit") || 100
-        );
+    const result = await response.json().catch(() => ({}));
 
-        const limit = Number.isFinite(requestedLimit)
-          ? Math.max(
-              1,
-              Math.min(500, Math.floor(requestedLimit))
-            )
-          : 100;
-
-        const result = await env.DB.prepare(
-          `SELECT id, fetched_at, payload
-           FROM room_snapshots
-           WHERE fetched_at >= ?
-           ORDER BY fetched_at DESC, id DESC
-           LIMIT ?`
-        ).bind(
-          Math.floor(Date.now() / 1000) -
-            RETENTION_SECONDS,
-          limit
-        ).all();
-
-        return jsonResponse({
-          count: result.results.length,
-          snapshots: result.results.map((row) => ({
-            id: row.id,
-            fetched_at: row.fetched_at,
-            data: JSON.parse(row.payload),
-          })),
-        });
-      }
-
-      return jsonResponse({
-        error: "Not found",
-        endpoints: [
-          "/health",
-          "/api/latest",
-          "/api/history?limit=100",
-          "/api/vapid-public-key",
-          "POST /api/subscribe",
-        ],
-      }, 404);
-    } catch (error) {
-      console.error("Request failed:", error);
-
-      return jsonResponse(
-        { error: "Internal server error" },
-        500
+    if (!response.ok) {
+      throw new Error(
+        result.error ||
+          `購読情報の保存に失敗しました (HTTP ${response.status})`
       );
     }
-  },
-};
+
+    localStorage.setItem(PLAYER_STORAGE_KEY, playerName);
+
+    setPlayerStatus(`監視対象：「${playerName}」`);
+    setPushStatus(
+      `通知購読を登録しました。「${playerName}」の情報をCloudflareに保存しました。`
+    );
+  } catch (error) {
+    setPushStatus(`設定できませんでした: ${error.message}`);
+  } finally {
+    if (enablePushButton) {
+      enablePushButton.disabled = false;
+    }
+  }
+});
