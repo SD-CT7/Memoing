@@ -1,0 +1,103 @@
+
+:root {
+  color-scheme: dark;
+  font-family: system-ui, sans-serif;
+  background: #101827;
+  color: #edf2f7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(ellipse at top, #203452, #101827 65%);
+}
+
+.container {
+  width: min(680px, 100%);
+  margin: 0 auto;
+  padding: 36px 20px;
+}
+
+header {
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  color: #7dd3fc;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+h1 {
+  font-size: clamp(28px, 6vw, 42px);
+  margin: 10px 0;
+}
+
+.subtitle,
+.panel p {
+  color: #b8c5d8;
+  line-height: 1.7;
+}
+
+.panel {
+  background: #192438;
+  border: 1px solid #33445e;
+  border-radius: 16px;
+  padding: 24px;
+  margin: 18px 0;
+}
+
+h2 {
+  font-size: 20px;
+  margin-top: 0;
+}
+
+label {
+  display: block;
+  margin: 16px 0 8px;
+}
+
+input {
+  display: block;
+  width: 100%;
+  padding: 13px;
+  color: #edf2f7;
+  background: #101827;
+  border: 1px solid #465a77;
+  border-radius: 9px;
+  font: inherit;
+}
+
+button {
+  width: 100%;
+  padding: 13px 16px;
+  margin-top: 14px;
+  border: 0;
+  border-radius: 9px;
+  background: #38bdf8;
+  color: #082033;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #7dd3fc;
+}
+
+.status {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+footer {
+  text-align: center;
+  font-size: 12px;
+  color: #91a2ba;
+  margin-top: 30px;
+}
