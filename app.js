@@ -18,7 +18,27 @@ saveButton.addEventListener("click", () => {
   // 実際の監視処理は次の段階で実装します。
 });
 
-document.getElementById("enablePush").addEventListener("click", () => {
-  document.getElementById("pushStatus").textContent =
-    "通知機能はまだ準備中です。次の手順で登録機能を追加します。";
+async function registerServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    throw new Error("このブラウザーはService Workerに対応していません。");
+  }
+
+  if (!window.isSecureContext) {
+    throw new Error("HTTPSで公開されたサイトを開いてください。");
+  }
+
+  return await navigator.serviceWorker.register("/sw.js");
+}
+
+document.getElementById("enablePush").addEventListener("click", async () => {
+  const status = document.getElementById("pushStatus");
+
+  try {
+    await registerServiceWorker();
+
+    status.textContent =
+      "Service Workerを登録できました。次は通知購読の設定を行います。";
+  } catch (error) {
+    status.textContent = "登録に失敗しました: " + error.message;
+  }
 });
