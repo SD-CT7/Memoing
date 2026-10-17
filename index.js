@@ -6,7 +6,7 @@ const RETENTION_SECONDS = 7 * 24 * 60 * 60;
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type",
 };
 
@@ -70,11 +70,63 @@ export default {
       });
     }
 
-    if (request.method !== "GET") {
-      return jsonResponse({ error: "Method not allowed" }, 405);
-    }
+if (!["GET", "POST"].includes(request.method)) {
+  return jsonResponse({ error: "Method not allowed" }, 405);
+}
 
     try {
+
+      if (request.method === "POST" &&
+          url.pathname === "/api/subscribe") {
+        const body = await request.json();
+
+        const playerName = typeof body.playerName === "string"
+          ? body.playerName.trim()
+          : "";
+
+        const subscription = body.subscription;
+        const endpoint = subscription?.endpoint;
+        const p256dh = subscription?.keys?.p256dh;
+        const auth = subscription?.keys?.auth;
+
+        if (
+          !playerName ||
+          playerName.length > 100 ||
+          typeof endpoint !== "string" ||
+          typeof p256dh !== "string" ||
+          typeof auth !== "string" ||
+          !endpoint.startsWith("https://") ||
+          endpoint.length > 4096 ||
+          p256dh.length > 200 ||
+          auth.length > 200
+        ) {
+          return jsonResponse({
+            error: "Invalid player name or subscription"
+          }, 400);
+        }
+
+        await env.DB.prepare(`
+          INSERT INTO push_subscriptions
+            (player_name, endpoint, p256dh, auth, created_at)
+          VALUES (?, ?, ?, ?, ?)
+          ON CONFLICT(endpoint) DO UPDATE SET
+            player_name = excluded.player_name,
+            p256dh = excluded.p256dh,
+            auth = excluded.auth
+        `).bind(
+          playerName,
+          endpoint,
+          p256dh,
+          auth,
+          Math.floor(Date.now() / 1000)
+        ).run();
+
+        return jsonResponse({
+          success: true,
+          message: "Subscription saved"
+        });
+      }
+      
       if (url.pathname === "/health") {
         return jsonResponse({
           status: "ok",
