@@ -1,47 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Leaderboard Table Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;900&family=Rubik+Mono+One&display=swap">
+<style>
+:root{--bg:#fafaf8;--fg:#1d1d1b;--mut:#6b6b66;--card:#fff;--bd:#dcdcd6;--ac:#2a6df4;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161615;--fg:#eeeeea;--mut:#9b9b94;--card:#222220;--bd:#3a3a36;--ac:#6f9bff;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#161615;--fg:#eeeeea;--mut:#9b9b94;--card:#222220;--bd:#3a3a36;--ac:#6f9bff;color-scheme:dark}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 system-ui,"Segoe UI","Noto Sans JP",sans-serif}
+main{max-width:1000px;margin:0 auto;padding:16px;display:grid;gap:14px}
+h1{font-size:18px;margin:0}p.s{margin:2px 0 0;color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:12px}
+textarea{width:100%;height:260px;font:13px/1.5 ui-monospace,Menlo,Consolas,"Noto Sans JP",monospace;background:var(--bg);color:var(--fg);border:1px solid var(--bd);border-radius:8px;padding:8px;resize:vertical}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px}
+select,button{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:5px 10px}
+button{cursor:pointer;background:var(--ac);color:#fff;border-color:var(--ac)}
+.cv{overflow-x:auto;border-radius:8px}canvas{display:block;max-width:100%;height:auto}
+small{color:var(--mut)}
+</style></head><body><main>
+<div><h1>Leaderboard Table Maker</h1><p class="s">ローカル版: 同じフォルダに flags/ と ranking1〜3.png を置いて開く。</p></div>
+<div class="card"><textarea id="t" spellcheck="false"></textarea>
+<div class="row"><label>スタイル <select id="st"></select></label>
+<label>倍率 <select id="sc"><option>1</option><option selected>2</option></select></label>
+<label><input type="checkbox" id="fl" checked> 国旗</label>
+<button id="dl">PNG保存</button><small id="msg"></small></div></div>
+<div class="card cv"><canvas id="c"></canvas></div>
+<small>書式: <code>TAG - チーム名 #RRGGBB (ボーナス)</code> の次行から <code>名前 [国] 10|20|30 (ボーナス)</code>。タグ併記形式 (<code>ABC名前 [jp] 50</code>) も可。メタ: <code>#title #date #style #hide teamNames,teamScores,playerScores</code>。国旗は ./flags/xx.png、メダルは ./ranking1-3.png を読みます。国コードは jp / us / uk(=gb) / gb-eng など。</small>
+</main>
+<script>
+"use strict";
+/* ===== matchData.ts port ===== */
+const SEP=".,-_*|·×■□▲△▼▽◆◇○◎●★☆♪⇔、。〃";
+const isSep=c=>SEP.includes(c);
+const trimS=s=>{while(s.length>1&&isSep(s[0]))s=s.slice(1).trim();return s};
+const trimE=s=>{while(s.length>1&&isSep(s[s.length-1]))s=s.slice(0,-1).trim();return s};
+function rTake(str,re){str=str.trim();const m=str.match(re);if(!m||m.index===undefined)return[str,""];
+ if(m[1]!==undefined)return[str.slice(0,m.index).trim(),m[1].trim()];return[str.slice(0,m.index).trim(),str.slice(m.index).trim()]}
+function strSum(s){let r=0,v=0,op=1;for(const c of s){const k=c.charCodeAt(0);
+ if(k>=48&&k<=57)v=v*10+k-48;else if(k>=0xFF10&&k<=0xFF19)v=v*10+k-0xFF10;
+ else if(c=="+"||c=="＋"){r+=v*op;v=0;op=1}else if(c=="-"||c=="－"||c=="ー"){r+=v*op;v=0;op=-1}}return r+v*op}
+function parseTeam(s){const[a,b]=rTake(s,/(?:\(|（)([0-9０-９＋－ー+-]+)(?:\)|）)$/);const[c,col]=rTake(a,/\s(\#[0-9A-Fa-f]{6})$/);
+ const[tag,name]=rTake(c,/\s+(?:\-|－|ー)\s+(.*?)$/);return{tag,name,color:col||undefined,bonus:b?strSum(b):0,players:[]}}
+function parsePlayer(s){const[a,b]=rTake(s,/(?:\(|（)([0-9０-９＋－ー+-]+)(?:\)|）)$/);const[c,sc]=rTake(a,/\s+[0-9０-９＋－ー+|｜-]+$/);
+ const[name,flag]=rTake(c,/(?:\[|［|「|【)(.*?)(?:\]|］|」|】)$/);if(!sc)return null;
+ return{name,fullName:name,flag:flag||undefined,scores:sc.split(/\||｜/).map(strSum),bonus:b?strSum(b):0}}
+const conf=c=>(c==66||c==54||c==56)?["B","6","8"]:[];
+function cmpConf(a,b){if(a===undefined||b===undefined||a.length!=b.length)return false;
+ for(let i=0;i<a.length;i++){if(a[i]===b[i]||a[i].toLowerCase()===b[i].toLowerCase())continue;
+  const c1=conf(a.charCodeAt(i)),c2=conf(b.charCodeAt(i)),l1=conf(a[i].toLowerCase().charCodeAt(0)),l2=conf(b[i].toLowerCase().charCodeAt(0));
+  if(!c1.some(x=>c2.some(y=>x===y)||l2.some(y=>x===y))&&!l1.some(x=>c2.some(y=>x===y)||l2.some(y=>x===y)))return false}return true}
+function commonSuffix(a,b){let s="";for(let i=0;i<a.length;i++){if(i>=b.length)continue;if(!cmpConf(a[i],b[i]))break;s+=a[i]}return s}
+function extractClans(pl,min){if(pl.length>32)return[];let cl=[];const n=pl.map(p=>p.name);
+ for(let p=0;p<n.length;p++)for(let q=0;q<n.length;q++){if(p==q)continue;const s=commonSuffix(n[p],n[q]).trim();if(s.length>min&&!cl.includes(s))cl.push(s)}
+ cl=cl.map(c=>trimE(c.trim()));return cl.length<=1?[]:cl}
+function assign(tags,players){let clans=tags.map(t=>({tag:t,name:undefined,players:[]}));const poss=new Map(),full=new Map();
+ for(const c of clans){let n=0;players.forEach(p=>{if(cmpConf(p.name.substring(0,(c.tag||"").length),c.tag))n++});poss.set(c,n)}
+ for(const pl of players){let clan=null,big=0;
+  for(const c of clans.filter(c2=>cmpConf(pl.name.substring(0,(c2.tag||"").length),c2.tag)))if(poss.get(c)>big){big=poss.get(c);clan=c}
+  if(!clan){clan=clans.find(c=>!c.tag);if(!clan){clan={tag:"",players:[]};clans.push(clan)}}
+  const cl=Object.assign({},pl);full.set(cl,cl.name);cl.name=trimS(cl.name.substring(clan.tag.length).trim());clan.players.push(cl)}
+ clans=clans.filter(c=>c.players.length>0);
+ for(const c of clans){if(!c.tag)continue;const used=[];for(const p of c.players){const t=full.get(p).substring(0,c.tag.length);let u=used.find(x=>x.tag===t);if(!u){u={tag:t,count:1};used.push(u)}else u.count++}
+  used.sort((a,b)=>b.count-a.count);c.tag=used[0].tag}return clans}
+/* colour helpers (framework/utils.ts) */
+function hsv2rgb({h,s,v}){let r=0,g=0,b=0;s=Math.max(0,Math.min(1,s));const i=Math.floor(h*6),f=h*6-i,p=v*(1-s),q=v*(1-f*s),t=v*(1-(1-f)*s);
+ switch(i%6){case 0:r=v;g=t;b=p;break;case 1:r=q;g=v;b=p;break;case 2:r=p;g=v;b=t;break;case 3:r=p;g=q;b=v;break;case 4:r=t;g=p;b=v;break;case 5:r=v;g=p;b=q}
+ return{r:Math.round(r*255),g:Math.round(g*255),b:Math.round(b*255)}}
+function rgb2hsv({r,g,b}){r/=255;g/=255;b/=255;const mx=Math.max(r,g,b),mn=Math.min(r,g,b),d=mx-mn;let h=0;const s=mx==0?0:d/mx;
+ if(mx!=mn){if(mx==r)h=(g-b)/d+(g<b?6:0);else if(mx==g)h=(b-r)/d+2;else h=(r-g)/d+4;h/=6}return{h,s,v:mx}}
+const rgb2hex=c=>"#"+((1<<24)+(Math.floor(c.r)<<16)+(Math.floor(c.g)<<8)+Math.floor(c.b)).toString(16).slice(1);
+const hex2rgb=s=>{const m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(s);return m?{r:parseInt(m[1],16),g:parseInt(m[2],16),b:parseInt(m[3],16)}:null};
+const lum=c=>Math.pow(.299*Math.pow(c.r/255,2.2)+.587*Math.pow(c.g/255,2.2)+.114*Math.pow(c.b/255,2.2),1/2.2);
+function autoColor(tag){let h=122;tag=tag.toLowerCase();for(const c of tag){if(c==" ")continue;h+=c.codePointAt(0)*12}h%=256;
+ return rgb2hex(hsv2rgb({h:h/256,s:tag==""?0:.1+(h>=150&&h<=215?(h>=165&&h<=200?.4:.6):.8),v:1}))}
+function parse(str){let lines=str.replace(/\r\n/g,"\n").split("\n").map(s=>s.trim()).filter(s=>s);
+ const md={teams:[]};if(!lines.length)return expand(md);
+ for(const l of lines){if(l.startsWith("#date"))md.date=new Date(l.slice(5).trim()).getTime();else if(l.startsWith("#title"))md.title=l.slice(6).trim();
+  else if(l.startsWith("#style"))md.style=l.slice(6).trim();else if(l.startsWith("#graph"))md.graph=l.slice(6).trim();
+  else if(l.startsWith("#hide"))for(const o of l.slice(5).split(",").map(s=>s.trim())){if(o==="teamNames")md.hideTeamNames=true;else if(o==="teamScores")md.hideTeamScores=true;else if(o==="playerScores")md.hidePlayerScores=true}}
+ lines=lines.filter(l=>!l.startsWith("#"));
+ if(lines.length&&parsePlayer(lines[0])==null){let team=null;for(const l of lines){const p=parsePlayer(l);if(p){if(team)team.players.push(p)}else{team=parseTeam(l);if(team)md.teams.push(team)}}}
+ else{const players=lines.map(parsePlayer).filter(Boolean),att=[];
+  for(let i=0;i<10;i++){const tags=extractClans(players,i);att.push({teams:assign(tags,players)})}
+  let best=-1e5,b=att[0];for(const a of att){let sc=a.teams.length;
+   if(a.teams.length>0){const n0=a.teams[0].players.length;if(a.teams.every(t=>t.players.length==n0))sc+=10}
+   const nt=a.teams.find(t=>!t.tag);if(nt)sc-=nt.players.length;if(sc>best){best=sc;b=a}}
+  md.teams=b.teams}
+ return expand(md)}
+function expand(m){const ex={...m,teams:[]},all=[];
+ for(const t of m.teams){const nt={ranking:0,tag:t.tag,name:t.name,finalScore:0,finalScoreWithoutBonus:0,bonus:t.bonus||0,color:t.color,autoColor:autoColor(t.tag||""),players:[]};
+  for(const p of t.players){const s=p.scores.reduce((a,x)=>a+x,0),np={ranking:0,name:p.name,fullName:p.fullName,flag:p.flag,scores:p.scores,bonus:p.bonus||0,finalScore:s+(p.bonus||0),finalScoreWithoutBonus:s};
+   nt.players.push(np);nt.finalScore+=np.finalScore;nt.finalScoreWithoutBonus+=np.finalScoreWithoutBonus;all.push(np)}
+  nt.finalScore+=nt.bonus;nt.players.sort((a,b)=>b.finalScoreWithoutBonus-a.finalScoreWithoutBonus);if(nt.players.length)ex.teams.push(nt)}
+ ex.teams.sort((a,b)=>b.finalScore-a.finalScore);all.sort((a,b)=>b.finalScoreWithoutBonus-a.finalScoreWithoutBonus);
+ ex.teams.forEach((t,i)=>t.ranking=i>0&&t.finalScore==ex.teams[i-1].finalScore?ex.teams[i-1].ranking:i+1);
+ all.forEach((p,i)=>p.ranking=i>0&&p.finalScoreWithoutBonus==all[i-1].finalScoreWithoutBonus?all[i-1].ranking:i+1);return ex}
 
-<!doctype html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#101827">
-  <title>CTWW Room Monitor</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <main class="container">
-    <header>
-      <p class="eyebrow">CTWW COMMUNITY TOOL</p>
-      <h1>CTWW Room Monitor</h1>
-      <p class="subtitle">お気に入りのプレイヤーのオンライン状態を通知します。</p>
-    </header>
+/* ===== tableStyles (tableRenderer.ts) ===== */
+const F=(n,w)=>({name:n,weight:w});
+const light={name:"Light",title:"",showDate:true,useRankingIcons:true,showTeamRankings:true,baseTextColor:"#000000",invertColors:false,autoGradient:.2,
+ useForcedColors:false,forcedColor1:"#fd4d44",forcedColor2:"#98fb56",forcedGradient1:[],forcedGradient2:[],useRankingColors:false,
+ rankingColor1:"#ffc800",rankingColor2:"#d4d4d4",rankingColor3:"#f77f2a",rankingColor4:"#ffffff",iconHeight:40,iconPlacement:"header_left",
+ bkgColor:"#000000",bkgOpacity:1,playerBkgColor:"#000000",playerBkgOpacity:.15,showBkgPolkaDots:true,hideTeamNames:false,hideTeamScores:false,hidePlayerScores:false,
+ headerFont:F("Roboto",900),teamNameFont:F("Roboto",900),playerNameFont:F("Roboto",900),playerScoreFont:F("Rubik Mono One",400),teamScoreFont:F("Rubik Mono One",400),rankingFont:F("Roboto",900)};
+const dark={...light,name:"Dark",baseTextColor:"#ffffff",invertColors:true,playerBkgColor:"#888888",playerBkgOpacity:.05};
+const thin={...dark,name:"Dark (Thin)",headerFont:F("Roboto",400),teamNameFont:F("Roboto",300),playerNameFont:F("Roboto",400),playerScoreFont:F("Rubik Mono One",400),teamScoreFont:F("Rubik Mono One",400),rankingFont:F("Roboto",400)};
+const styles={light,dark,darkThin:thin,
+ atlasLeague:{...thin,name:"Atlas League",showTeamRankings:false,useRankingIcons:false,useForcedColors:true,forcedColor1:"#5eb6ea",forcedColor2:"#ffffff",forcedGradient1:["#68c4eb","#4d72e7"],forcedGradient2:["#b0dfe3","#ffffff"],autoGradient:0,playerBkgColor:"#000000",playerBkgOpacity:.15},
+ mku:{...thin,name:"MKU",title:"Mario Kart Universal",showTeamRankings:false,useRankingIcons:false,useForcedColors:true,forcedColor1:"#007f86",forcedColor2:"#cd4e00",autoGradient:0,playerBkgColor:"#000000",playerBkgOpacity:.15,
+  headerFont:F("Roboto",300),teamNameFont:F("Roboto",300),playerNameFont:F("Roboto",300),playerScoreFont:F("Rubik Mono One",400),teamScoreFont:F("Rubik Mono One",400),rankingFont:F("Roboto",300)}};
 
-    <section class="panel">
-      <h2>プレイヤー監視</h2>
-      <label for="playerName">プレイヤー名</label>
-      <input id="playerName" type="text"
-             placeholder="プレイヤー名を入力">
-      <button id="savePlayer" type="button">監視対象を設定</button>
-      <p id="playerStatus" class="status" aria-live="polite">
-        まだ監視対象は設定されていません。
-      </p>
-    </section>
+/* ===== images: ./ranking1-3.png, ./flags/xx.png (相対パス) ===== */
+const IMG={};let raf=0;const sched=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>render())};
+function img(src){let e=IMG[src];if(!e){e=IMG[src]={i:new Image(),ok:null};e.i.onload=()=>{e.ok=true;sched()};e.i.onerror=()=>{e.ok=false;sched()};e.i.src=src}return e}
+function flagUrl(raw){if(typeof raw!=="string"||/[.:\/\\]/.test(raw)||raw.length>8)return null;
+ let f="";for(const ch of raw){const c=ch.charCodeAt(0);f+=(c>=0xFF21&&c<=0xFF3A)?String.fromCharCode(c-0xFF21+65):(c>=0xFF41&&c<=0xFF5A)?String.fromCharCode(c-0xFF41+97):ch}
+ f=f.toLowerCase().replace(/_/g,"-");if(f.startsWith("uk"))f="gb"+f.slice(2);return/^[a-z0-9-]+$/.test(f)?"flags/"+f+".png":null}
+function drawFit(ctx,im,x,y,maxW,maxH){let w=im.naturalWidth||120,h=im.naturalHeight||120;const p=(w/h>maxW/maxH)?maxW/w:maxH/h;w*=p;h*=p;ctx.drawImage(im,x-w/2,y-h/2,w,h)}
+function drawFlagBox(ctx,code,rect){const u=flagUrl(code);if(!u)return;const e=img(u);
+ if(e.ok===null)return;
+ let w=400,h=300;const maxW=rect.w-8,maxH=rect.h-8,p=(w/h>maxW/maxH)?maxW/w:maxH/h;w*=p;h*=p;const x=rect.xc-w/2,y=rect.yc-h/2;
+ ctx.save();ctx.fillStyle="#000";ctx.beginPath();ctx.roundRect(x-2,y-2,w+4,h+4,6);ctx.fill();ctx.restore();
+ ctx.save();ctx.beginPath();ctx.roundRect(x,y,w,h,4);ctx.clip();
+ if(e.ok)ctx.drawImage(e.i,x,y,w,h);else{ctx.fillStyle="#555";ctx.fillRect(x,y,w,h);ctx.fillStyle="#fff";ctx.font="700 "+h*.5+"px Roboto,sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText((code||"").slice(0,2).toUpperCase(),rect.xc,rect.yc)}
+ ctx.restore()}
 
-    <section class="panel">
-      <h2>プッシュ通知</h2>
-      <p>通知を許可すると、対応ブラウザーでオンライン通知を受け取れるようになります。</p>
-      <button id="enablePush" type="button">
-        通知を設定する
-      </button>
-      <p id="pushStatus" class="status" aria-live="polite">
-        通知はまだ設定されていません。
-      </p>
-    </section>
+/* ===== drawTable ===== */
+const FOM=.1;
+function text(ctx,s,x,y,w,size,color,f,fitWidth=false){ctx.save();ctx.font=`${f.weight} ${size}px ${f.name}, "Noto Sans JP", sans-serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillStyle=color;
+ const fontScale=f.name==="Rubik Mono One"?.78:1;
+ if(fitWidth){const maxWidth=Math.max(0,w-10),measured=ctx.measureText(s).width*fontScale,fitScale=measured>maxWidth&&measured>0?maxWidth/measured:1;
+  ctx.translate(x,y+size*fitScale*FOM);ctx.scale(fontScale*fitScale,fitScale);ctx.fillText(s,0,0)}
+ else if(fontScale!==1){ctx.translate(x,y+size*FOM);ctx.scale(fontScale,1);ctx.fillText(s,0,0)}
+ else ctx.fillText(s,x,y+size*FOM);ctx.restore()}
+function rankStr(r){if(r%100<10||r%100>20){if(r%10==1)return r+"st";if(r%10==2)return r+"nd";if(r%10==3)return r+"rd"}return r+"th"}
+function ranking(ctx,rect,pad,ts,col,r,st){if(st.useRankingIcons&&r<=3){const e=img("ranking"+r+".png");
+  if(e.ok)drawFit(ctx,e.i,rect.xc,rect.yc,rect.w-pad,rect.h-pad);else if(e.ok===false)text(ctx,rankStr(r),rect.xc,rect.yc,rect.w-4,ts,col,st.rankingFont)}
+ else text(ctx,rankStr(r),rect.xc,rect.yc,rect.w-4,ts,col,st.rankingFont)}
+function teamColors(ctx,y1,h,ti,tc,team,st){let col=team.color||team.autoColor;
+ if(st.useForcedColors)col=ti%2==0?st.forcedColor1:st.forcedColor2;
+ else if(st.useRankingColors)col=[st.rankingColor1,st.rankingColor2,st.rankingColor3][team.ranking-1]||st.rankingColor4;
+ let gs=[];if(st.useForcedColors)gs=ti%2==0?st.forcedGradient1:st.forcedGradient2;
+ if(st.autoGradient>0){const g=Math.min(1,st.autoGradient),base=()=>rgb2hsv(hex2rgb(col)||{r:255,g:255,b:255}),H=[];
+  if(tc>2){let a=base();a.h=(a.h+1-.25*g)%1;a.v*=.95;let b=base();b.s*=.9;let c=base();c.h=(c.h+.25*g)%1;c.v*=.95;gs=[a,b,c].map(x=>rgb2hex(hsv2rgb(x)))}
+  else{const v1=.9+.1*Math.sin(Math.PI*ti/tc),v2=.9+.1*Math.sin(Math.PI*(ti+1)/tc),s1=1-.2*Math.sin(Math.PI*ti/tc),s2=1-.2*Math.sin(Math.PI*(ti+1)/tc);
+   let a=base();a.h=(a.h+1-.25*g)%1;a.v*=v1;a.s*=s1;let b=base();b.h=(b.h+.25*g)%1;b.v*=v2;b.s*=s2;gs=[rgb2hex(hsv2rgb(a)),col,rgb2hex(hsv2rgb(b))]}}
+ let grad=null;if(gs.length){grad=ctx.createLinearGradient(0,y1,0,y1+h);gs.forEach((c,i)=>grad.addColorStop(i/Math.max(1,gs.length-1),c))}
+ let tx=lum(hex2rgb(col)||{r:255,g:255,b:255})<.25?"#fff":st.baseTextColor,bg=grad??col;if(st.invertColors){tx=grad??col;bg="#111"}return{col,tx,bg}}
+function dots(ctx,x,y,w,h,color){ctx.save();ctx.beginPath();ctx.rect(x,y,w,h);ctx.clip();ctx.fillStyle=color;let alt=true;const yc=y+h/2;
+ for(let d=0;d<h/2+10;d+=10){alt=!alt;ctx.globalAlpha=.25*Math.pow(d/(h/2),2.2);ctx.beginPath();for(let px=alt?7.5:0;px<w+14;px+=14){ctx.moveTo(px+x,yc+d);ctx.arc(px+x,yc+d,4,0,7);ctx.moveTo(px+x,yc-d);ctx.arc(px+x,yc-d,4,0,7)}ctx.fill()}ctx.restore()}
+const R=(x,y,w,h)=>({x,y,w,h,xc:x+w/2,yc:y+h/2});
 
-    <footer>
-      <p>CTWW Room Monitor · Community tool</p>
-    </footer>
-  </main>
-  <script src="app.js"></script>
-</body>
-</html>
+function drawTable(cv,scale,m,st,showFlags){
+ let hasFlags=false,hasPB=false,rows=0,maxSc=1,tD=3,pD=3;
+ const hTN=st.hideTeamNames||!!m.hideTeamNames,hTS=st.hideTeamScores||!!m.hideTeamScores,hPS=st.hidePlayerScores||!!m.hidePlayerScores,hBoth=hTN&&hTS;
+ for(const t of m.teams){tD=Math.max(tD,String(t.finalScore).length);if(t.bonus)rows++;
+  for(const p of t.players){rows++;if(p.flag&&showFlags)hasFlags=true;if(p.bonus)hasPB=true;maxSc=Math.max(maxSc,p.scores.length);for(const s of p.scores)pD=Math.max(pD,String(s).length)}}
+ const pad=Math.max(0,480-rows*38-m.teams.length*20),tsW=260+90*(tD-3),psBaseW=12+14*pD,pbW=60;
+ /* geometry (resolved equivalent of layout.ts boxes) */
+ const rkW=st.showTeamRankings?60:0,nmW=263-rkW+(hasPB?pbW:0)+(hBoth?-100:0),
+  pnBaseW=139+(hPS?psBaseW:0)+(hBoth?200:0),
+  nameMeasureCtx=document.createElement("canvas").getContext("2d");
+ nameMeasureCtx.font=`${st.playerNameFont.weight} ${34*.65}px ${st.playerNameFont.name}, "Noto Sans JP", sans-serif`;
+ let widestPlayerName=0;
+ for(const team of m.teams)for(const player of team.players)widestPlayerName=Math.max(widestPlayerName,nameMeasureCtx.measureText(player.name).width);
+ const compactNames=!hPS&&!hBoth&&!hTS&&widestPlayerName>0,
+  basePnW=compactNames?Math.min(pnBaseW,Math.max(72,widestPlayerName+14)):pnBaseW,
+  /* Widen only the player-name cell; scores and rank slot keep their widths. */
+  nameExtraW=Math.max(0,152-basePnW),pnW=basePnW+nameExtraW,
+  pnSlack=pnBaseW-basePnW,
+  scoreColumnCount=maxSc+(maxSc>1?1:0),
+  pointsExtension=compactNames?pnSlack:0,
+  psW=psBaseW+pointsExtension/scoreColumnCount,
+  flW=hasFlags?54:0,scW=hPS?0:psW,fsW=maxSc>1?scW:0,
+  plW=pnW+flW+maxSc*scW+fsW+42,bnW=hPS?0:pbW,
+  baseTsW2=tsW+(hBoth?-100:0),tsW2=baseTsW2+pnSlack-pointsExtension-nameExtraW,
+  W=rkW+nmW+plW+bnW+tsW2,HH=40;
+ let y=HH;const T=m.teams.map(t=>{const tr=t.players.length+(t.bonus?1:0),tp=pad*tr/rows,h=20+tp+tr*34+(tr-1)*4,o={y,h,tp,tr};y+=h;return o});
+ const H=m.teams.length?y:528;
+ cv.width=W*scale;cv.height=H*scale;const ctx=cv.getContext("2d");ctx.save();ctx.scale(scale,scale);
+ ctx.fillStyle=st.bkgColor;ctx.fillRect(0,0,W,H);
+ ctx.fillStyle="#000";ctx.fillRect(0,0,W,HH);
+ ctx.font="900 20px Roboto, sans-serif";ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillStyle="#fffa";ctx.fillText("gb.hlorenzi.com",W-10,HH/2+2,150);
+ const hs=[];if(st.title)hs.push(st.title);if(m.title)hs.push(m.title);
+ if(st.showDate){const d=m.date?new Date(m.date):new Date();hs.push(d.getDate()+" "+["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]+" "+d.getFullYear())}
+ text(ctx,hs.join("    •    "),W/2,HH/2,W-360,25,"#fff",st.headerFont);
+ m.teams.forEach((team,t)=>{const g=T[t],{col,tx,bg}=teamColors(ctx,g.y,g.h,t,m.teams.length,team,st);
+  ctx.save();ctx.globalAlpha=st.bkgOpacity;ctx.fillStyle=bg;ctx.fillRect(0,g.y,W,g.h);ctx.restore();
+  if(st.showBkgPolkaDots){const hv=rgb2hsv(hex2rgb(col));hv.h=(hv.h+.95)%1;hv.s=Math.max(hv.s-.25,0);hv.v*=.6;dots(ctx,0,g.y,W,g.h,st.invertColors?"#333":rgb2hex(hsv2rgb(hv)))}
+  const ink=st.invertColors?st.baseTextColor:tx;
+  if(st.showTeamRankings&&!hTN)ranking(ctx,R(0,g.y,60,g.h),24,60*.25,ink,team.ranking,st);
+  const nr=R(rkW,g.y,nmW,g.h);
+  if(!hTN){const ts=Math.min(nr.h*(team.name?.5:.85),nr.w*.45);text(ctx,team.tag,nr.xc,nr.yc+(team.name?-ts*FOM:0),nr.w-20,ts,tx,st.teamNameFont,true);
+   if(team.name){const ns=Math.min(nr.h*.2,nr.w*.15);text(ctx,team.name,nr.xc,nr.yc+ts/2+ns/2-ns*FOM,nr.w-20,ns,tx,st.teamNameFont,true)}}
+  const sx=W-tsW2;
+  if(!hTS){const sr=R(sx,g.y,tsW2,g.h),ss=Math.min(sr.h*.65,baseTsW2*.35),scoreX=sr.xc-24-nameExtraW/2;text(ctx,String(team.finalScore),scoreX,sr.yc,sr.w,ss,tx,st.teamScoreFont);
+   if(t>0)text(ctx,"±"+Math.abs(m.teams[t-1].finalScore-team.finalScore),scoreX,g.y,sr.w-20,28,st.baseTextColor,st.teamNameFont)}
+  const px=rkW+nmW,py=g.y+10+g.tp/2,rowY=p=>py+p*38;
+  team.players.forEach((p,i)=>{const ry=rowY(i);ctx.save();ctx.fillStyle=st.playerBkgColor;ctx.globalAlpha=st.playerBkgOpacity;ctx.beginPath();ctx.roundRect(px,ry,plW,34,5);ctx.fill();ctx.restore();
+   text(ctx,p.name,px+pnW/2+6,ry+17,pnW-4,34*.65,tx,st.playerNameFont,true);
+   if(hasFlags&&p.flag&&showFlags)drawFlagBox(ctx,p.flag,R(px+pnW,ry,54,34));
+   let cx=px+pnW+flW;
+   if(!hPS){p.scores.forEach((s,k)=>{ctx.save();ctx.globalAlpha=maxSc>1?.75:1;text(ctx,String(s),cx+psW/2,ry+17,psW-4,34*(maxSc>1?.6:.65),tx,st.playerScoreFont);ctx.restore();
+     if(maxSc>1&&k<p.scores.length-1){ctx.fillStyle="#fff4";ctx.fillRect(cx+psW-1,ry+4,2,26)}cx+=psW});
+    if(maxSc>1){cx=px+pnW+flW+maxSc*psW;ctx.fillStyle=st.invertColors?"#4444":"#fff4";ctx.fillRect(cx,ry,psW,34);text(ctx,String(p.finalScoreWithoutBonus),cx+psW/2,ry+17,psW-4,34*.65,tx,st.playerScoreFont)}
+    if(hasPB&&p.bonus)text(ctx,"("+(p.bonus>=0?"+":"")+p.bonus+")",px+plW+bnW/2,ry+17,bnW,17,tx,st.playerScoreFont)}
+   ranking(ctx,R(px+plW-42,ry,42,34),4,34*.65*.6,ink,p.ranking,st)});
+  if(team.bonus&&!hTS){const ry=rowY(team.players.length);ctx.save();ctx.fillStyle=st.playerBkgColor;ctx.globalAlpha=st.playerBkgOpacity;ctx.beginPath();ctx.roundRect(px+10,ry+2,plW-20,30,5);ctx.fill();ctx.restore();
+   text(ctx,team.bonus>=0?"Bonus":"Penalty",px+pnW/2,ry+17,pnW-4,17,tx,st.playerNameFont);
+   const bx=maxSc>1?px+pnW+flW+maxSc*psW:px+pnW+flW+(maxSc-1)*psW;text(ctx,(team.bonus>=0?"+":"")+team.bonus,bx+psW/2,ry+17,psW-4,17,tx,st.playerScoreFont)}});
+ ctx.restore()}
+
+/* ===== UI ===== */
+const SAMPLE=`#title Mogi 12v12 Finals
+#date 2026-11-04
+Alpha - Team Alpha #3a86ff
+Ren [jp] 28|31|35
+Sam [us] 25|27|30 (+5)
+Lee [kr] 22|20|28
+Max [de] 19|24|21 (-2)
+
+Bravo - Team Bravo #ef476f (-10)
+Aki [jp] 30|26|24
+Eva [br] 27|25|27
+Noa [fr] 21|23|19
+Tom [gb] 18|20|22
+
+Charlie
+Yui [jp] 24|22|26
+Leo [it] 23|21|20
+Zoe [es] 20|19|21
+Ian [ca] 17|18|19`;
+const $=id=>document.getElementById(id),cv=$("c"),ta=$("t"),sel=$("st");
+for(const k in styles)sel.add(new Option(styles[k].name,k));ta.value=SAMPLE;
+function render(){const m=parse(ta.value);let k=sel.value;
+ if(m.style&&styles[m.style]&&document.activeElement!==sel)k=m.style;
+ drawTable(cv,+$("sc").value,m,styles[k],$("fl").checked);
+ $("msg").textContent=m.teams.length+" teams / "+m.teams.reduce((a,t)=>a+t.players.length,0)+" players"}
+["input","change"].forEach(e=>document.addEventListener(e,render));
+Promise.all(["900 20px Roboto","400 20px Roboto","300 20px Roboto","400 20px \"Rubik Mono One\""].map(f=>document.fonts.load(f,"Aa1").catch(()=>0))).then(render);
+render();
+$("dl").onclick=()=>{try{cv.toBlob(b=>{if(!b){$("msg").textContent="保存失敗: 下記の注意を参照";return}const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="leaderboard.png";document.body.appendChild(a);a.click();a.remove()},"image/png")}
+ catch(e){$("msg").textContent="file:// 直開きでは画像が混在扱いで保存不可。キャンバスを右クリック→画像を保存、または start-server を使用"}};
+</script></body></html>
