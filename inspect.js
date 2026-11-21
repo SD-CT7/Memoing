@@ -1,37 +1,70 @@
+
 const { chromium } = require("playwright");
+const fs = require("fs");
 
 (async () => {
+  const logFile = "Logs.txt";
+
+  // ログファイルを新規作成・初期化
+  fs.writeFileSync(
+    logFile,
+    `Web Inspection Log\nStarted: ${new Date().toISOString()}\n\n`
+  );
+
+  function log(type, message) {
+    const line = `[${new Date().toISOString()}] [${type}] ${message}\n`;
+
+    fs.appendFileSync(logFile, line);
+    console.log(line.trim());
+  }
+
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
 
-  page.on("console", msg =>
-    console.log(`[${msg.type()}] ${msg.text()}`)
-  );
+  page.on("console", msg => {
+    log(`CONSOLE:${msg.type()}`, msg.text());
+  });
 
-  page.on("pageerror", error =>
-    console.log("[PAGE ERROR]", error.message)
-  );
+  page.on("pageerror", error => {
+    log("PAGE ERROR", error.stack || error.message);
+  });
 
-  page.on("requestfailed", request =>
-    console.log("[REQUEST FAILED]", request.url())
-  );
+  page.on("requestfailed", request => {
+    log(
+      "REQUEST FAILED",
+      `${request.url()} | ${request.failure()?.errorText || "Unknown"}`
+    );
+  });
 
   page.on("response", response => {
     if (response.status() >= 400) {
-      console.log(
-        "[HTTP ERROR]",
-        response.status(),
-        response.url()
+      log(
+        "HTTP ERROR",
+        `${response.status()} ${response.statusText()} | ${response.url()}`
       );
     }
   });
 
-  await page.goto(process.argv[2], {
-    waitUntil: "domcontentloaded",
-    timeout: 60000
-  });
+  try {
+    const url = process.argv[2];
 
-  await page.waitForTimeout(10000);
+    if (!url) throw new Error("URLを指定してください");
 
-  await browser.close();
+    log("INFO", `Target: ${url}`);
+
+    await page.goto(url, {
+      waitUntil: "domcontentloaded",
+      timeout: 60000
+    });
+
+    log("INFO", "Page loaded");
+
+    await page.waitForTimeout(10000);
+
+  } catch (error) {
+    log("FATAL ERROR", error.stack || error.message);
+  } finally {
+    await browser.close();
+    log("INFO", "Inspection finished");
+  }
 })();
