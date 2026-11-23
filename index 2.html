@@ -1,0 +1,2234 @@
+﻿<!DOCTYPE html><html lang="ja"><head>
+<meta charset="UTF-8">
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-K8KRHMR2FT"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-K8KRHMR2FT');
+</script>
+<!-- 100% privacy-first analytics -->
+<script async src="https://scripts.simpleanalyticscdn.com/latest.js"></script>
+<base href="/">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Official Time Trial (TT) & TA Leaderboard for Mario Kart 7 Custom Tracks (CTGP-7 / CTGP7 / CT7). Check the latest world records and rankings. マリオカート7 カスタムトラックのタイムアタック(TA・TT)ランキング・世界記録まとめサイトです。">
+<title>CTGP-7 TT Leaderboard</title>
+<link rel="icon" type="image/x-icon" href="/favicon.ico">
+<meta name="google-site-verification" content="PtHCcC0MvOGzZiMDQwL14gEuNdEO_nUdO_RQ9Enl7cI" />
+<style>
+  :root {
+    --bg-color: #333338;
+    --card-bg: #000;
+    --border-color: #444;
+    --highlight: #f1c40f;
+    --transition-speed: 0.6s;
+    --hover-speed: 0.15s; 
+    
+    --easing-smooth: cubic-bezier(0.25, 1, 0.5, 1);
+    --sidebar-width: 120px; 
+    
+    --gold-smooth: linear-gradient(to bottom, #fffbe0 0%, #fef06a 20%, #f7d54d 45%, #e2a400 55%, #f1b800 80%, #d48a00 100%);
+    --gray-smooth: linear-gradient(to bottom, #ffffff 0%, #e0e0e0 20%, #bdbdbd 45%, #888888 55%, #aaaaaa 80%, #666666 100%);
+    --bold-line: 3px solid #000;
+  }
+
+  body {
+    background-color: var(--bg-color);
+    font-family: 'Arial Black', Arial, sans-serif;
+    color: white;
+    padding: 0;
+    margin: 0;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* カード展開時は背景スクロール禁止 */
+  body.mode-expanded {
+    overflow: hidden !important;
+    touch-action: none;
+  }
+
+  /* ローディング画面のCSS */
+  #loading-screen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: #1a1a1a;
+    z-index: 2147483647; /* 最前面 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.5s ease, visibility 0.5s;
+  }
+  #loading-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .loading-text {
+    font-size: 2rem;
+    margin-bottom: 20px;
+    color: #fff;
+    text-shadow: 2px 2px 0 #000;
+    letter-spacing: 2px;
+  }
+  .progress-container {
+    width: 300px;
+    height: 10px;
+    background: #333;
+    border: 2px solid #555;
+    border-radius: 5px;
+    overflow: hidden;
+    position: relative;
+  }
+  .progress-bar {
+    height: 100%;
+    width: 0%;
+    background: var(--gold-smooth);
+    transition: width 0.1s linear;
+  }
+
+  .screen { padding: 20px; box-sizing: border-box; width: 100%; min-height: 100vh; transition: opacity 0.5s; }
+  .hidden { display: none !important; }
+  
+  h1 { text-align: center; margin-bottom: 30px; text-shadow: 3px 3px 0 rgba(0,0,0,0.8); font-style: italic; transition: opacity 0.5s; padding: 0 90px; box-sizing: border-box; font-size: clamp(1.3rem, 4vw, 2rem); }
+
+  /* カップ選択画面 */
+  .cups-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 25px; max-width: 1400px; margin: 0 auto; position: relative; }
+  
+  .cup-card {
+    background: var(--card-bg); border: 3px solid var(--border-color); border-radius: 12px;
+    position: relative; overflow: hidden; cursor: pointer; 
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
+    
+    transition: width var(--transition-speed) var(--easing-smooth), 
+                height var(--transition-speed) var(--easing-smooth), 
+                top var(--transition-speed) var(--easing-smooth), 
+                left var(--transition-speed) var(--easing-smooth), 
+                transform var(--hover-speed) var(--easing-smooth), 
+                padding-left var(--transition-speed) var(--easing-smooth), 
+                border-color var(--hover-speed), 
+                opacity 0.5s ease;
+    z-index: 1; box-sizing: border-box; padding-left: 0; 
+  }
+
+  .cup-card:not(.active):hover { 
+    transform: translateY(-5px) scale(1.02); 
+    border-color: var(--highlight); 
+    z-index: 10; 
+  }
+  
+  .cup-card.active { 
+    z-index: 1000; 
+    border-color: var(--highlight); 
+    cursor: default; 
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.85); 
+    padding-left: var(--sidebar-width); 
+    overflow: visible; 
+  }
+
+  body.mode-expanded .cup-card:not(.active) { opacity: 0; pointer-events: none; }
+  body.mode-expanded h1 { opacity: 0; pointer-events: none; }
+  
+  /* 背景クリック用プレースホルダー */
+  .cup-card-placeholder { visibility: hidden; border: 3px solid transparent; box-sizing: border-box; cursor: pointer; }
+
+  /* グリッド設定 */
+  .course-grid { 
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2px; 
+    background-color: #000; padding: 2px; 
+    width: 100%; height: 100%; 
+    transition: width var(--transition-speed) var(--easing-smooth), height var(--transition-speed) var(--easing-smooth), margin var(--transition-speed) var(--easing-smooth);
+  }
+
+  /* デスクトップ用：枠の余白確保 */
+  .cup-card.active .course-grid {
+    width: calc(100% - 50px);
+    height: calc(100% - 25px); 
+    margin-top: 12.5px;        
+  }
+  
+  .course-img-wrapper { 
+    width: 100%; aspect-ratio: 35 / 24; background-color: #222; overflow: hidden; position: relative; 
+    transition: transform var(--hover-speed) var(--easing-smooth), filter 0.3s ease; 
+    touch-action: pan-y; 
+  }
+  
+  .course-img-wrapper img { 
+    width: 100%; height: 100%; object-fit: cover; display: block; 
+    filter: brightness(0.7) grayscale(20%); 
+    transition: filter 0.3s ease;
+    pointer-events: none; 
+  }
+  
+  .cup-card:not(.active):hover .course-img-wrapper img { filter: brightness(1.0) grayscale(0%); }
+  .cup-card.active .course-img-wrapper { cursor: pointer; pointer-events: auto; }
+  .cup-card.active .course-img-wrapper img { filter: brightness(1.0) grayscale(0%); pointer-events: none; }
+  .cup-card.active .course-img-wrapper:hover { transform: translateY(-5px) scale(1.05); z-index: 2; }
+
+  /* アイコン */
+  .cup-icon-wrapper { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100px; height: 100px; display: flex; align-items: center; justify-content: center; z-index: 5; pointer-events: none; transition: all var(--transition-speed); }
+  .cup-icon-wrapper img { max-width: 100%; max-height: 100%; object-fit: contain; filter: brightness(0.8) drop-shadow(2px 2px 0 rgba(0,0,0,1.0)); }
+  .cup-card.active .cup-icon-wrapper { left: calc(var(--sidebar-width) / 2); transform: translate(-50%, -50%) scale(1.5); }
+  .cup-card.active .cup-icon-wrapper img { filter: brightness(1.1) drop-shadow(3px 3px 0 rgba(255, 255, 255, 0.3)); }
+
+  /* その他UI要素 */
+  #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: transparent; z-index: 900; opacity: 0; pointer-events: none; transition: opacity 0.5s; }
+  body.mode-expanded #overlay { opacity: 1; pointer-events: auto; }
+
+  /* 画面右上の全体用×ボタン */
+  .close-btn { position: fixed; top: 30px; right: 30px; width: 60px; height: 60px; background: #e74c3c; border: 4px solid #000; border-radius: 50%; color: #fff; font-size: 40px; font-family: Arial, sans-serif; line-height: 1; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2000; opacity: 0; pointer-events: none; transition: transform 0.15s, opacity 0.3s, background 0.15s; box-shadow: 4px 4px 0 rgba(0,0,0,0.5); }
+  body.mode-expanded .close-btn { opacity: 1; pointer-events: auto; }
+  .close-btn:hover { transform: scale(1.1); background: #ff5e57; }
+
+  /* モーダルの白い×ボタン */
+  .close-modal-btn { 
+    position: absolute; top: -50px; right: -10px; width: 40px; height: 40px; 
+    color: #fff; font-size: 40px; font-weight: bold; cursor: pointer; 
+    line-height: 1; text-align: center; 
+  }
+
+  /* ★ Credits & Links (リンク対応版) */
+  .info-container {
+    width: 100%;
+    max-width: 420px;
+    margin: 60px auto 20px auto; 
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    font-family: sans-serif;
+    color: white;
+    transition: opacity 0.5s; 
+  }
+
+  body.mode-expanded .info-container {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .info-container fieldset {
+    border: 2px solid #ffffff;
+    border-radius: 15px;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+
+  .info-container legend {
+    font-size: 24px;
+    font-weight: bold;
+    padding: 0 10px;
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .info-content {
+    font-size: 22px;
+    font-weight: bold;
+  }
+
+  .info-credits-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px 20px;
+  }
+
+  /* ★ここを変更：リンク用のスタイル */
+  .info-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    text-decoration: none; /* 下線を消す */
+    color: white; /* 文字色を白に固定 */
+  }
+  .info-item:hover {
+    opacity: 0.7;
+  }
+
+  .info-icon {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+  }
+
+  #ranking-screen { background-color: #333; padding-top: 40px; position: relative; padding-bottom: 50px; }
+  .ranking-header { max-width: 900px; margin: 0 auto 30px auto; display: flex; justify-content: space-between; align-items: center; }
+  .course-title { font-size: 2rem; text-shadow: 2px 2px 0 #000; margin: 0; flex: 1; text-align: right; }
+  
+  /* 右側カプセルのCSS (PC用) */
+  .capsule {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    right: 25px; 
+    width: 120px;
+    height: 620px;
+    background-color: #4b4b4b;
+    border: 6px solid #ffe400;
+    border-radius: 120px;
+    box-sizing: border-box;
+    z-index: 100;
+    
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-evenly;
+    padding: 20px 0;
+  }
+  
+  .capsule-item {
+    position: relative;
+    width: 100%; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.15s cubic-bezier(0.25, 1, 0.5, 1);
+    cursor: pointer;
+  }
+  
+  .capsule-item img {
+    width: 90%; 
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.5));
+  }
+  
+  .capsule-item:hover {
+    transform: scale(1.2); 
+    z-index: 10;
+  }
+
+  .capsule-item::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    right: 120%; 
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: bold;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s;
+    pointer-events: none;
+    z-index: 999999;
+    border: 1px solid #555;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+  }
+  .capsule-item:hover::after { opacity: 1; visibility: visible; }
+
+  /* 戻るボタン：z-index 500 */
+  .back-btn { 
+    padding: 10px 20px; font-size: 1rem; font-weight: bold; color: #000; background: var(--gray-smooth); border: 3px solid #000; cursor: pointer; border-radius: 5px; transition: transform 0.1s; flex: 0 0 auto; 
+    position: relative; z-index: 500; 
+  }
+  .back-btn:hover { transform: scale(1.05); }
+
+  /* モード切替ボタンの親コンテナ：z-index 600 */
+  .mode-toggle-container { 
+    flex: 1; display: flex; justify-content: center; 
+    position: relative; z-index: 600; 
+  }
+  
+  .mode-toggle { display: flex; background: #444; border: 3px solid #000; border-radius: 50px; overflow: visible; cursor: pointer; box-shadow: 4px 4px 0 rgba(0,0,0,0.5); transform: scale(1.0); transition: transform 0.1s; }
+  
+  .toggle-option { 
+    width: 80px; height: 40px; 
+    display: flex; align-items: center; justify-content: center; 
+    background: var(--gray-smooth); transition: background 0.3s; 
+    padding: 2px; position: relative; 
+    user-select: none; 
+    -webkit-user-select: none;
+  }
+  
+  .toggle-option:first-child { border-top-left-radius: 46px; border-bottom-left-radius: 46px; border-right: 3px solid #000; }
+  .toggle-option:last-child { border-top-right-radius: 46px; border-bottom-right-radius: 46px; }
+  .toggle-option.selected { background: var(--gold-smooth); box-shadow: inset 2px 2px 5px rgba(0,0,0,0.2); }
+  
+  .toggle-option img { 
+    max-height: 80%; max-width: 80%; object-fit: contain; 
+    filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.5)); 
+    pointer-events: none; 
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+  
+  /* 既存ツールチップ */
+  .toggle-option::after { content: attr(data-tooltip); position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%); background-color: rgba(0, 0, 0, 0.9); color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; white-space: nowrap; opacity: 0; visibility: hidden; transition: opacity 0.15s, bottom 0.15s; pointer-events: none; z-index: 999999; border: 1px solid #555; }
+  .toggle-option::before { content: ''; position: absolute; bottom: 115%; left: 50%; transform: translateX(-50%); border-width: 6px; border-style: solid; border-color: rgba(0,0,0,0.9) transparent transparent transparent; opacity: 0; visibility: hidden; transition: opacity 0.15s, bottom 0.15s; z-index: 999999; }
+  .toggle-option:hover::after { opacity: 1; visibility: visible; bottom: 115%; }
+  .toggle-option:hover::before { opacity: 1; visibility: visible; bottom: 105%; }
+
+  /* Glitchボタン */
+  .glitch-btn {
+    width: 50px; height: 50px;
+    margin-left: 20px;
+    background: #e74c3c;
+    border: 3px solid #000;
+    border-radius: 50%;
+    color: #fff;
+    font-family: 'Arial Black', sans-serif;
+    font-size: 1.8rem;
+    font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+    transition: transform 0.1s, background 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+  .glitch-btn:hover::after {
+    content: attr(data-tooltip);
+    position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.9); color: #fff; padding: 6px 12px;
+    border-radius: 6px; font-size: 0.8rem; white-space: nowrap;
+    pointer-events: none; z-index: 999999; border: 1px solid #555;
+  }
+  .glitch-btn:hover { transform: scale(1.1); filter: brightness(1.1); }
+  
+  /* 選択された状態 */
+  .glitch-btn.active {
+    background: #7f8c8d;
+    box-shadow: inset 3px 3px 5px rgba(0,0,0,0.5);
+    transform: translateY(2px);
+    color: #eee;
+    border-color: #555; 
+  }
+
+  .ranking-list { display: flex; flex-direction: column; align-items: center; width: 100%; }
+  .rank-row { display: flex; width: 100%; max-width: 800px; height: 70px; border: var(--bold-line); background: var(--gray-smooth); box-sizing: border-box; margin-bottom: 10px; cursor: default; color: #000; opacity: 0; transform: translateX(-100vw); transition: transform 0.1s var(--easing-smooth), filter 0.1s; }
+  .rank-row.rank-1st { background: var(--gold-smooth); z-index: 10; }
+  .rank-row:hover { filter: brightness(1.1); transform: translateY(-2px) scale(1.02) !important; z-index: 5; }
+  
+  .section { height: 100%; border-right: var(--bold-line); display: flex; align-items: center; justify-content: center; font-weight: bold; }
+  .section:last-child { border-right: none; }
+  .col-rank { flex: 0 0 70px; padding: 0; font-size: 1.5rem; }
+  .col-rank img { max-height: 100%; max-width: 100%; object-fit: contain; }
+  .col-name { flex: 3; justify-content: flex-start; padding-left: 20px; font-size: 1.2rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .col-time { flex: 1.5; font-family: monospace; font-size: 1.2rem; }
+  .col-icon { flex: 0 0 70px; padding: 5px; box-sizing: border-box; }
+  .col-flag { flex: 0 0 50px; padding: 2px; }
+  .col-flag img { width: 90%; height: 90%; object-fit: contain; filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.3)); }
+  .time-link, .name-link { color: inherit; text-decoration: underline; text-decoration-thickness: 3px; cursor: pointer; transition: opacity 0.1s; }
+  .time-link:hover, .name-link:hover { opacity: 0.5; color: inherit;}
+  .col-icon a, .col-icon div { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; }
+  .col-icon img { max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.3)); transition: transform 0.1s var(--easing-smooth); cursor: pointer; }
+  .col-icon a:hover img, .col-icon div:hover img { transform: scale(1.2); filter: none; }
+
+  /* Read More ボタンのデザイン */
+  .read-more-btn {
+    display: block;
+    width: 200px;
+    margin: 20px auto;
+    padding: 10px;
+    text-align: center;
+    background: var(--gold-smooth); 
+    border: 3px solid #000; 
+    border-radius: 50px;
+    color: #000; 
+    font-family: 'Arial Black', sans-serif;
+    font-weight: bold;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: transform 0.2s, filter 0.2s;
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.5);
+  }
+  .read-more-btn:hover {
+    transform: scale(1.05);
+    filter: brightness(1.1);
+  }
+
+  #data-status { position: fixed; bottom: 5px; left: 5px; font-size: 10px; background: rgba(0,0,0,0.7); padding: 3px 6px; border-radius: 4px; z-index: 9999; pointer-events: none; color: #fff; }
+  
+  /* モーダル：z-index 2147483647 */
+  #video-modal { 
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background: rgba(0,0,0,0.95); 
+    z-index: 2147483647; 
+    display: flex; align-items: center; justify-content: center; 
+    opacity: 0; pointer-events: none; transition: opacity 0.3s ease; 
+  }
+  #video-modal.visible { opacity: 1; pointer-events: auto; }
+  .modal-content { position: relative; width: 90%; max-width: 960px; aspect-ratio: 16 / 9; background: #000; border: 2px solid #555; box-shadow: 10px 10px 0 rgba(0,0,0,1); display: flex; align-items: center; justify-content: center; }
+  .modal-content iframe { width: 100%; height: 100%; border: none; }
+  .modal-content img { width: 100%; height: 100%; object-fit: contain; }
+  
+  @keyframes slideInLeft { 0% { opacity: 0; transform: translateX(-120vw); } 60% { transform: translateX(20px); } 100% { opacity: 1; transform: translateX(0); } }
+  .animate-slide-in { animation: slideInLeft 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+
+  /* ★★★ スマホ用修正 ★★★ */
+  .mobile-category-btn { display: none; }
+  .mobile-category-overlay { display: none; }
+
+  @media (orientation: portrait) {
+    .capsule { display: none; }
+
+    /* スマホ用カテゴリボタン */
+    .mobile-category-btn {
+      display: grid;
+      width: 45px;
+      height: 45px;
+      margin-left: 10px;
+      cursor: pointer;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 3px;
+      padding: 6px;
+      box-sizing: border-box;
+      position: relative;
+      background: #6a6a6a; 
+      border: 3px solid #000;
+      border-radius: 12px;
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+      transition: transform 0.1s;
+    }
+    .mobile-category-btn:active { transform: scale(0.95); }
+
+    .uu-box {
+      border: 3px solid #fff; 
+      border-radius: 3px;
+    }
+    
+    /* 虫眼鏡 */
+    .uu-magnifier-circle {
+      width: 45%; height: 45%;
+      border: 3px solid #fff;
+      border-radius: 50%;
+      position: absolute;
+      top: 10%; left: 5%;
+    }
+    .uu-magnifier-handle {
+      position: absolute;
+      width: 3px; height: 35%;
+      background-color: #fff;
+      bottom: 5%; right: 15%;
+      transform: rotate(-45deg);
+      border-radius: 0 0 2px 2px;
+    }
+    .uu-search-container {
+      position: relative;
+      display: flex; justify-content: center; align-items: center;
+    }
+
+    /* スマホ用カテゴリメニューオーバーレイ */
+    .mobile-category-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.8);
+      z-index: 2000000; 
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s;
+    }
+    .mobile-category-overlay.visible { opacity: 1; pointer-events: auto; }
+
+    .mobile-category-list {
+      background: #4b4b4b;
+      border: 4px solid #ffe400;
+      border-radius: 20px;
+      padding: 20px;
+      display: flex; flex-direction: column; gap: 20px;
+      max-width: 80%;
+    }
+    
+    .mobile-category-item {
+      display: flex; align-items: center; gap: 15px;
+      color: #fff; font-size: 1.2rem; font-weight: bold;
+      cursor: pointer;
+      background: rgba(0,0,0,0.2);
+      padding: 10px 20px;
+      border-radius: 10px;
+    }
+    .mobile-category-item img {
+      width: 50px; height: auto;
+      filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.5));
+    }
+
+    .mode-toggle-container { align-items: center; gap: 10px; }
+    .glitch-btn { width: 45px; height: 45px; font-size: 1.5rem; margin-left: 10px; }
+
+    .cup-card.active {
+      position: fixed !important; top: 0 !important; left: 0 !important; 
+      transform: none !important;
+      width: 100% !important; 
+      height: 100dvh !important;
+      margin: 0 !important;
+      border-radius: 0 !important; 
+      
+      display: flex !important; flex-direction: column; 
+      padding: 10px !important; padding-top: 20px !important; 
+      
+      overscroll-behavior: contain; 
+      overflow-y: auto !important; 
+      -webkit-overflow-scrolling: touch;
+      
+      cursor: default;
+      box-shadow: none !important; 
+    }
+    
+    .cup-card.active .cup-icon-wrapper { position: relative !important; top: auto !important; left: auto !important; transform: none !important; width: 80px !important; height: 80px !important; margin: 0 auto 15px auto !important; order: -1; flex-shrink: 0; }
+    
+    .cup-card.active .course-grid { 
+      display: flex !important; flex-direction: column; gap: 15px; 
+      height: auto !important; width: 100% !important; 
+      padding-bottom: 20px; 
+      background: transparent !important; 
+      margin-top: 0 !important; 
+    }
+    
+    .cup-card.active .course-img-wrapper { width: 100% !important; height: auto !important; aspect-ratio: 35 / 24; flex-shrink: 0; }
+    .course-img-wrapper img { filter: brightness(1.0) grayscale(0%) !important; }
+    .close-btn { top: 15px !important; right: 15px !important; width: 50px; height: 50px; font-size: 30px; }
+    .ranking-header { flex-direction: column; gap: 15px; }
+    .course-title { order: -1; text-align: center; font-size: 1.5rem; }
+
+    /* ▼▼▼ スマホUI レイアウト変更箇所 ▼▼▼ */
+    .rank-row { 
+      display: grid !important;
+      grid-template-columns: 60px 1fr 50px 40px; 
+      grid-template-rows: 1fr 1fr;
+      height: auto; 
+      min-height: 70px; 
+      padding: 5px 0;
+      align-items: center;
+    }
+
+    .section.col-rank { grid-column: 1; grid-row: 1 / 3; border-right: none; justify-content: center; height: 100%; }
+    .section.col-name { grid-column: 2; grid-row: 1; border-right: none; padding-left: 10px; padding-bottom: 0; align-self: end; width: 100%; font-size: 1.0rem; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .section.col-time { grid-column: 2; grid-row: 2; border-right: none; padding-left: 10px; padding-top: 0; align-self: start; width: 100%; justify-content: flex-start; font-size: 1.0rem; }
+    .section.col-icon { grid-column: 3; grid-row: 1 / 3; border-right: none; justify-content: center; height: 100%; }
+    .section.col-flag { grid-column: 4; grid-row: 1 / 3; border-right: none; justify-content: center; height: 100%; }
+    
+    .col-rank img, .col-icon img, .col-flag img { max-height: 80%; }
+
+    .leaderboard-btn { top: 15px; right: 15px; width: 46px; height: 46px; }
+    h1 { padding: 0 60px; font-size: clamp(1.05rem, 5.5vw, 1.5rem); }
+    .expand-panel.active-panel {
+      position: fixed !important; top: 0 !important; left: 0 !important;
+      transform: none !important;
+      width: 100% !important; height: 100dvh !important;
+      margin: 0 !important; border-radius: 0 !important;
+      box-shadow: none !important;
+    }
+    .pp-tabs { display: none !important; }
+    .pp-mobile-btn { display: grid !important; margin: 12px auto !important; }
+
+    .record-row {
+      display: grid !important;
+      grid-template-columns: 50px 1fr 40px;
+      grid-template-rows: 1fr 1fr;
+      height: auto;
+      min-height: 56px;
+      padding: 5px 0;
+      align-items: center;
+    }
+    .rr-rank { grid-column: 1; grid-row: 1 / 3; border-right: none !important; justify-content: center; height: 100%; }
+    .rr-track {
+      grid-column: 2; grid-row: 1; border-left: none !important;
+      padding: 0 10px !important; align-self: end; width: 100%;
+      font-size: 0.9rem !important; line-height: 1.2;
+      text-align: center;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .rr-time {
+      grid-column: 2; grid-row: 2; border-left: none !important;
+      padding: 0 10px !important; align-self: start; width: 100%;
+      justify-content: center !important; font-size: 0.9rem;
+    }
+    .rr-icon { grid-column: 3; grid-row: 1 / 3; border-left: none !important; justify-content: center; height: 100%; }
+    .pp-tab { font-size: 0.75rem; padding: 5px 10px; }
+  }
+
+  /* ★ プレイヤーリーダーボード ボタン(右上) */
+  .leaderboard-btn {
+    position: fixed; top: 30px; right: 30px;
+    width: 60px; height: 60px;
+    background: var(--gray-smooth);
+    border: 4px solid #000; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; overflow: hidden;
+    z-index: 1500;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+    transition: transform 0.15s, opacity 0.3s, border-color 0.15s;
+  }
+  .leaderboard-btn img { width: 65%; height: 65%; object-fit: contain; }
+  .leaderboard-btn:hover { transform: scale(1.1); border-color: var(--highlight); }
+  body.mode-expanded .leaderboard-btn { opacity: 0; pointer-events: none; }
+
+  /* ★ フルスクリーン展開パネル共通(リーダーボード・プレイヤープロフィールで共有) */
+  .expand-panel {
+    background: var(--card-bg);
+    border: 3px solid var(--highlight);
+    border-radius: 12px;
+    box-sizing: border-box;
+    overflow: hidden;
+    z-index: 1000;
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.85);
+    display: flex; flex-direction: column;
+    transition: width var(--transition-speed) var(--easing-smooth),
+                height var(--transition-speed) var(--easing-smooth),
+                top var(--transition-speed) var(--easing-smooth),
+                left var(--transition-speed) var(--easing-smooth),
+                transform var(--transition-speed) var(--easing-smooth),
+                opacity var(--transition-speed) var(--easing-smooth);
+  }
+  .lb-header {
+    flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+    padding: 20px 25px; border-bottom: var(--bold-line);
+    position: relative;
+  }
+  .lb-header h2 { font-size: 1.6rem; margin: 0; text-shadow: 2px 2px 0 rgba(0,0,0,0.8); }
+  .lb-body { flex: 1 1 auto; overflow-y: auto; padding: 20px; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
+
+  .panel-close-btn {
+    position: absolute; right: 15px; top: 50%; transform: translateY(-50%);
+    width: 32px; height: 32px; border-radius: 50%;
+    background: #e74c3c; border: 3px solid #000; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-family: Arial, sans-serif; line-height: 1;
+    cursor: pointer; transition: transform 0.15s;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+  }
+  .panel-close-btn:hover { transform: translateY(-50%) scale(1.1); }
+
+  /* ★ 地域・国フィルター: Earthボタン */
+  .earth-btn {
+    width: 45px; height: 45px; flex-shrink: 0;
+    border-radius: 50%;
+    background: var(--gray-smooth);
+    border: 3px solid #000;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    transition: transform 0.1s, box-shadow 0.15s;
+  }
+  .earth-btn img { width: 75%; height: 75%; object-fit: contain; }
+  .earth-btn:hover { transform: scale(1.08); }
+  .earth-btn.filter-active { box-shadow: 4px 4px 0 rgba(0,0,0,0.5), 0 0 0 3px var(--highlight); }
+
+  .lb-header .earth-btn { position: absolute; left: 15px; top: 50%; width: 32px; height: 32px; transform: translateY(-50%); }
+  .lb-header .earth-btn:hover { transform: translateY(-50%) scale(1.08); }
+
+  /* ★ 地域・国フィルター: 選択ダイアログ */
+  .country-filter-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 2000000;
+    align-items: center; justify-content: center;
+  }
+  .country-filter-overlay.visible { display: flex; }
+  .country-filter-box {
+    background: var(--card-bg);
+    border: 3px solid var(--highlight);
+    border-radius: 12px;
+    width: min(420px, 90vw);
+    max-height: 78vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    box-shadow: 10px 10px 0 rgba(0,0,0,0.6);
+  }
+  .cf-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: var(--bold-line); }
+  .cf-header h3 { margin: 0; font-size: 1.1rem; color: white; text-align: center; flex: 1; }
+  .cf-back-btn { cursor: pointer; font-weight: bold; font-size: 0.8rem; color: var(--highlight); visibility: hidden; white-space: nowrap; }
+  .cf-back-btn.visible { visibility: visible; }
+  .cf-close-btn { width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%; background: #e74c3c; border: 3px solid #000; color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; }
+  .cf-list { overflow-y: auto; padding: 12px; }
+  .cf-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; margin-bottom: 8px;
+    background: var(--gray-smooth); border: 3px solid #000; border-radius: 8px;
+    color: #000; font-weight: bold; font-size: 0.9rem; cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .cf-item:hover { transform: translateX(4px); }
+  .cf-item.selected { background: var(--gold-smooth); border-color: var(--highlight); }
+  .cf-item img { width: 22px; height: 16px; object-fit: contain; flex-shrink: 0; }
+  .cf-item.all-item { justify-content: center; }
+
+  .player-row {
+    display: flex; align-items: center; width: 100%; max-width: 700px;
+    height: 56px; margin: 0 auto 10px auto;
+    border: var(--bold-line); background: var(--gray-smooth); color: #000;
+    box-sizing: border-box;
+    opacity: 0; transform: translateX(-100vw);
+    transition: transform 0.1s var(--easing-smooth), filter 0.1s;
+    cursor: pointer;
+  }
+  .player-row.rank-1st { background: var(--gold-smooth); }
+  .player-row:hover { filter: brightness(1.1); transform: translateY(-2px) scale(1.02) !important; z-index: 5; }
+  .pr-rank { flex: 0 0 55px; height: 100%; border-right: var(--bold-line); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: bold; }
+  .pr-rank img { max-height: 75%; max-width: 75%; object-fit: contain; }
+  .pr-name { flex: 1; padding-left: 20px; font-size: 1.05rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pr-points { flex: 0 0 110px; height: 100%; border-left: var(--bold-line); display: flex; align-items: center; justify-content: center; font-family: monospace; font-size: 1.05rem; font-weight: bold; }
+
+  /* ★ プレイヤープロフィールページ */
+  .pp-tabs { display: flex; gap: 8px; padding: 12px 20px; border-bottom: var(--bold-line); flex-wrap: wrap; justify-content: center; flex: 0 0 auto; }
+  .pp-tab {
+    display: flex; align-items: center; gap: 5px;
+    padding: 6px 14px; background: var(--gray-smooth);
+    border: 3px solid #000; border-radius: 20px;
+    cursor: pointer; font-weight: bold; font-size: 0.85rem;
+    transition: transform 0.1s, background 0.1s, border-color 0.1s;
+    white-space: nowrap;
+  }
+  .pp-tab img { width: 16px; height: 16px; object-fit: contain; }
+  .pp-tab:hover { transform: translateY(-2px); }
+  .pp-tab.selected { background: var(--gold-smooth); border-color: var(--highlight); }
+
+  .sort-toggle-container { display: flex; justify-content: center; padding: 10px 20px; border-bottom: var(--bold-line); }
+  .sort-toggle { display: flex; background: #444; border: 3px solid #000; border-radius: 50px; overflow: hidden; cursor: pointer; box-shadow: 4px 4px 0 rgba(0,0,0,0.5); }
+  .sort-toggle-option { padding: 8px 22px; font-size: 0.85rem; font-weight: bold; color: #ccc; transition: background 0.2s, color 0.2s; user-select: none; -webkit-user-select: none; }
+  .sort-toggle-option.selected { background: var(--gold-smooth); color: #000; }
+
+  .record-row {
+    display: flex; align-items: center; width: 100%; max-width: 700px;
+    height: 56px; margin: 0 auto 10px auto;
+    border: var(--bold-line); background: var(--gray-smooth); color: #000;
+    box-sizing: border-box;
+    opacity: 0; transform: translateX(-100vw);
+    transition: transform 0.1s var(--easing-smooth), filter 0.1s;
+  }
+  .record-row.gold-rank { background: var(--gold-smooth); }
+  .record-row:hover { filter: brightness(1.1); transform: translateY(-2px) scale(1.02) !important; z-index: 5; }
+  .rr-rank { flex: 0 0 50px; height: 100%; border-right: var(--bold-line); display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: bold; }
+  .rr-rank img { max-height: 75%; max-width: 75%; object-fit: contain; }
+  .rr-track { flex: 1; padding-left: 16px; font-size: 0.95rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rr-tire { flex: 0 0 36px; height: 100%; border-left: var(--bold-line); display: flex; align-items: center; justify-content: center; }
+  .rr-tire img { max-width: 60%; max-height: 60%; }
+  .rr-time { flex: 0 0 100px; height: 100%; border-left: var(--bold-line); display: flex; align-items: center; justify-content: center; font-family: monospace; font-size: 0.9rem; font-weight: bold; }
+  .rr-track.course-jump { cursor: pointer; text-decoration: underline; text-decoration-thickness: 2px; }
+  .rr-track.course-jump:hover { opacity: 0.6; }
+  .rr-icon { flex: 0 0 40px; height: 100%; border-left: var(--bold-line); display: flex; align-items: center; justify-content: center; }
+  .rr-icon a, .rr-icon div { display: flex; width: 100%; height: 100%; align-items: center; justify-content: center; }
+  .rr-icon img { max-width: 60%; max-height: 60%; object-fit: contain; }
+</style>
+</head>
+<body>
+
+  <div id="loading-screen">
+    <div class="loading-text">Now Loading...</div>
+    <div class="progress-container">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+  </div>
+
+  <div id="data-status" style="display:none">Initializing...</div>
+  
+  <div id="video-modal" onclick="closeVideoModal()">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="close-modal-btn" onclick="closeVideoModal()">×</div>
+      <iframe id="youtube-frame" src="" style="display:none;"></iframe>
+      <img id="modal-image" src="" style="display:none;">
+      <video id="modal-video" controls style="display:none; width:100%; height:100%; outline:none;"></video>
+    </div>
+  </div>
+
+  <div id="cup-select-screen" class="screen">
+    <h1>CTGP-7 TT Leaderboard</h1>
+    <div id="overlay"></div><div class="close-btn" onclick="handleGlobalClose()">×</div>
+
+    <div class="leaderboard-btn" id="leaderboard-btn" onclick="openLeaderboard()">
+      <img src="person.webp" alt="Players" onerror="this.style.display='none'">
+    </div>
+
+    <div id="leaderboard-panel" class="expand-panel hidden">
+      <div class="lb-header">
+        <div class="earth-btn" onclick="openCountryFilterMenu()"><img src="Earth.webp" onerror="this.style.display='none'"></div>
+        <h2>Player Leaderboard</h2>
+        <div class="panel-close-btn" onclick="closeLeaderboard()">×</div>
+      </div>
+      <div class="lb-body">
+        <div class="ranking-list" id="playerRankingList"></div>
+      </div>
+    </div>
+
+    <div class="cups-container" id="cupsContainer"></div>
+    
+    <div class="info-container">
+      <fieldset>
+          <legend>Credits</legend>
+          <div class="info-content info-credits-list">
+              <a href="https://x.com/SB_CTGP" target="_blank" rel="noopener noreferrer" class="info-item">
+                  <span>@SD</span>
+                  <img src="X.webp" alt="" class="info-icon">
+              </a>
+              <a href="https://www.youtube.com/@Pierre__" target="_blank" rel="noopener noreferrer" class="info-item">
+                  <span>@Pierre</span>
+                  <img src="Youtube.webp" alt="" class="info-icon">
+              </a>
+          </div>
+      </fieldset>
+
+      <fieldset>
+          <legend>Other links</legend>
+          <div class="info-content info-grid">
+              <a href="https://docs.google.com/spreadsheets/d/1I8z7cbKY2tpw2BvKi1hA3KPifSOOlkR6ji3NvbdE1a0" target="_blank" rel="noopener noreferrer" class="info-item">
+                  <img src="excel.webp" alt="" class="info-icon">
+                  <span>Top5s</span>
+              </a>
+              <a href="https://docs.google.com/spreadsheets/d/1aqhIBbpPZBoziX9KXVK7c4JL9Zir7OLp0uWcgjoFn90" target="_blank" rel="noopener noreferrer" class="info-item">
+                  <img src="excel.webp" alt="" class="info-icon">
+                  <span>Chart</span>
+              </a>
+              <a href="https://docs.google.com/spreadsheets/d/1t-iFEK_NHvX9LVMvH1_hjLXI_47ti9H-4awDXuEpUm8" target="_blank" rel="noopener noreferrer" class="info-item">
+                  <img src="excel.webp" alt="" class="info-icon">
+                  <span>Players</span>
+              </a>
+              <a href="https://discord.gg/MExtXDS43u" target="_blank" rel="noopener noreferrer" class="info-item">
+                  <img src="Discord.webp" alt="" class="info-icon">
+                  <span>Discord</span>
+              </a>
+          </div>
+      </fieldset>
+    </div>
+  </div>
+
+  <div id="ranking-screen" class="screen hidden">
+    <div class="capsule">
+      <div class="capsule-item" data-tooltip="General" onclick="switchCategory('General')"><img src="General.webp"></div>
+      <div class="capsule-item" data-tooltip="Flap" onclick="switchCategory('Flap')"><img src="Flap.webp"></div>
+      <div class="capsule-item" data-tooltip="200cc" onclick="switchCategory('Default')"><img src="200cc.webp"></div>
+      <div class="capsule-item" data-tooltip="Shroomless" onclick="switchCategory('Default')"><img src="Shroomless.webp"></div>
+      <div class="capsule-item" data-tooltip="Mission" onclick="switchCategory('Mission')"><img src="Mission.webp"></div>
+    </div>
+    
+    <div id="mobile-category-overlay" class="mobile-category-overlay" onclick="closeCategoryMenu()">
+      <div class="mobile-category-list" onclick="event.stopPropagation()">
+        <div class="mobile-category-item" onclick="switchCategory('General'); closeCategoryMenu();">
+          <img src="General.webp"> General
+        </div>
+        <div class="mobile-category-item" onclick="switchCategory('Flap'); closeCategoryMenu();">
+          <img src="Flap.webp"> Flap
+        </div>
+        <div class="mobile-category-item" onclick="switchCategory('Default'); closeCategoryMenu();">
+          <img src="200cc.webp"> 200cc
+        </div>
+        <div class="mobile-category-item" onclick="switchCategory('Default'); closeCategoryMenu();">
+          <img src="Shroomless.webp"> Shroomless
+        </div>
+        <div class="mobile-category-item" onclick="switchCategory('Mission'); closeCategoryMenu();">
+          <img src="Mission.webp"> Mission
+        </div>
+      </div>
+    </div>
+
+    <div class="ranking-header">
+      <button class="back-btn" onclick="goBackToCups()">← Back</button>
+      <div class="mode-toggle-container">
+        <div class="mode-toggle" onclick="toggleMode()">
+          <div class="toggle-option selected" id="opt-without" data-tooltip="Any tires"><img src="without.webp"></div>
+          <div class="toggle-option" id="opt-dekatire" data-tooltip="Monster tires only"><img src="dekatire.webp"></div>
+        </div>
+        <div id="glitch-btn" class="glitch-btn hidden" onclick="toggleGlitchMode()" data-tooltip="Glitch Category">G</div>
+        
+        <div class="mobile-category-btn" onclick="openCategoryMenu()">
+          <div class="uu-box"></div>
+          <div class="uu-box"></div>
+          <div class="uu-box"></div>
+          <div class="uu-search-container">
+            <div class="uu-magnifier-circle"></div>
+            <div class="uu-magnifier-handle"></div>
+          </div>
+        </div>
+
+        <div class="earth-btn" onclick="openCountryFilterMenu()">
+          <img src="Earth.webp" onerror="this.style.display='none'">
+        </div>
+      </div>
+      <h2 id="ranking-course-title" class="course-title">Course Name</h2>
+    </div>
+    <div class="ranking-list" id="rankingList"></div>
+  </div>
+
+  <div id="country-filter-overlay" class="country-filter-overlay" onclick="closeCountryFilterMenu()">
+    <div class="country-filter-box" onclick="event.stopPropagation()">
+      <div class="cf-header">
+        <span class="cf-back-btn" id="cf-back-btn" onclick="showRegionList()">← Back</span>
+        <h3 id="cf-title">Filter by Region</h3>
+        <div class="cf-close-btn" onclick="closeCountryFilterMenu()">×</div>
+      </div>
+      <div class="cf-list" id="cf-list"></div>
+    </div>
+  </div>
+
+  <div id="player-profile-panel" class="expand-panel hidden">
+    <div class="lb-header"><h2 id="pp-name">Player</h2><div class="panel-close-btn" onclick="closePlayerProfile()">×</div></div>
+    <div class="pp-tabs" id="pp-tabs">
+      <div class="pp-tab selected" data-cat="General" onclick="switchProfileCategory('General')"><img src="General.webp">General</div>
+      <div class="pp-tab" data-cat="Flap" onclick="switchProfileCategory('Flap')"><img src="Flap.webp">Flap</div>
+      <div class="pp-tab" data-cat="200cc" onclick="switchProfileCategory('200cc')"><img src="200cc.webp">200cc</div>
+      <div class="pp-tab" data-cat="Shroomless" onclick="switchProfileCategory('Shroomless')"><img src="Shroomless.webp">Shroomless</div>
+      <div class="pp-tab" data-cat="Mission" onclick="switchProfileCategory('Mission')"><img src="Mission.webp">Mission</div>
+    </div>
+
+    <div class="mobile-category-btn pp-mobile-btn" onclick="openProfileCategoryMenu()">
+      <div class="uu-box"></div>
+      <div class="uu-box"></div>
+      <div class="uu-box"></div>
+      <div class="uu-search-container">
+        <div class="uu-magnifier-circle"></div>
+        <div class="uu-magnifier-handle"></div>
+      </div>
+    </div>
+
+    <div id="profile-mobile-category-overlay" class="mobile-category-overlay" onclick="closeProfileCategoryMenu()">
+      <div class="mobile-category-list" onclick="event.stopPropagation()">
+        <div class="mobile-category-item" onclick="switchProfileCategory('General'); closeProfileCategoryMenu();">
+          <img src="General.webp"> General
+        </div>
+        <div class="mobile-category-item" onclick="switchProfileCategory('Flap'); closeProfileCategoryMenu();">
+          <img src="Flap.webp"> Flap
+        </div>
+        <div class="mobile-category-item" onclick="switchProfileCategory('200cc'); closeProfileCategoryMenu();">
+          <img src="200cc.webp"> 200cc
+        </div>
+        <div class="mobile-category-item" onclick="switchProfileCategory('Shroomless'); closeProfileCategoryMenu();">
+          <img src="Shroomless.webp"> Shroomless
+        </div>
+        <div class="mobile-category-item" onclick="switchProfileCategory('Mission'); closeProfileCategoryMenu();">
+          <img src="Mission.webp"> Mission
+        </div>
+      </div>
+    </div>
+
+    <div class="sort-toggle-container">
+      <div class="sort-toggle" id="pp-sort-toggle">
+        <div class="sort-toggle-option selected" data-sort="course" onclick="setProfileSortMode('course')">Course</div>
+        <div class="sort-toggle-option" data-sort="rank" onclick="setProfileSortMode('rank')">Rank</div>
+      </div>
+    </div>
+
+    <div class="lb-body">
+      <div class="ranking-list" id="ppRecordList"></div>
+    </div>
+  </div>
+
+<script>
+// ▼▼▼▼▼▼▼▼ 設定 & 読み込み管理 ▼▼▼▼▼▼▼▼
+
+const RANK_IMG_BASE = "split_1_";
+const RANK_EXT = ".webp"; 
+
+// 読み込むべき画像リスト
+const STATIC_ICONS = [
+  "Youtube.webp",
+  "X.webp",
+  "Filenow.webp",
+  "Discord.webp",
+  "Novideo.webp",
+  "Scotland.webp",
+  "without.webp",
+  "dekatire.webp",
+  "Mission.webp",
+  "Flap.webp",
+  "Shroomless.webp",
+  "General.webp",
+  "200cc.webp",
+  "excel.webp" 
+];
+
+for (let i = 1; i <= 8; i++) {
+  STATIC_ICONS.push(`${RANK_IMG_BASE}${i}${RANK_EXT}`);
+}
+
+const SUPABASE_URL = 'https://fpbwgncudjekqwplluct.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_CxryfeGj45IL6opyJJlEAg_s985qwS9';
+
+const CSV_URLS = {
+  Default: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTG7cpe3sUQsINvQrt8pjd3dIOdKethaou57zQy-rFlycWeJqgNdAkDWvA5-OCQNmZOur_iokr9dEFo/pub?gid=2103674373&single=true&output=csv",
+  Flap: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTG7cpe3sUQsINvQrt8pjd3dIOdKethaou57zQy-rFlycWeJqgNdAkDWvA5-OCQNmZOur_iokr9dEFo/pub?gid=1016759313&single=true&output=csv",
+  Mission: "https://docs.google.com/spreadsheets/d/e/2PACX-1vTG7cpe3sUQsINvQrt8pjd3dIOdKethaou57zQy-rFlycWeJqgNdAkDWvA5-OCQNmZOur_iokr9dEFo/pub?gid=1676868794&single=true&output=csv"
+};
+
+let loadedAssets = 0;
+const totalImages = STATIC_ICONS.length;
+const totalCsvs = Object.keys(CSV_URLS).length + 1 + 1; // +1 Supabase General, +1 Player Leaderboard
+const totalAssets = totalImages + totalCsvs;
+
+function updateProgress() {
+  loadedAssets++;
+  const percent = Math.min((loadedAssets / totalAssets) * 100, 100);
+  document.getElementById('progress-bar').style.width = percent + '%';
+  
+  if (loadedAssets >= totalAssets) {
+    setTimeout(() => {
+      document.getElementById('loading-screen').classList.add('hidden');
+    }, 500);
+  }
+}
+
+STATIC_ICONS.forEach(src => {
+  const img = new Image();
+  img.onload = updateProgress;
+  img.onerror = updateProgress;
+  img.src = src;
+});
+
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+let allCategoryData = {};
+let currentSheetUrl = CSV_URLS.General; 
+
+const LOCAL_CSV_PATH = "./times.csv";
+const COURSES_PER_CUP = 4;
+const ICON_BASE_PATH = "./Icons/"; 
+const SCALE_FACTOR = 2.5;
+const SIDEBAR_WIDTH = 120;
+const FLAG_BASE_URL = "https://www.mofa.go.jp/mofaj/kids/img/flags/";
+
+// ▼▼▼▼▼▼▼▼ 地域・国フィルター ▼▼▼▼▼▼▼▼
+// 南アメリカは記録が無いため選択肢には出さないが、判定用に一応保持しておく
+const REGION_DATA = {
+  "Asia": [
+    { code: "jp", name: "Japan" }, { code: "kr", name: "South Korea" }, { code: "cn", name: "China" },
+    { code: "tw", name: "Taiwan" }, { code: "hk", name: "Hong Kong" }, { code: "in", name: "India" },
+    { code: "id", name: "Indonesia" }, { code: "my", name: "Malaysia" }, { code: "ph", name: "Philippines" },
+    { code: "sg", name: "Singapore" }, { code: "th", name: "Thailand" }, { code: "vn", name: "Vietnam" },
+    { code: "kh", name: "Cambodia" }, { code: "la", name: "Laos" }, { code: "mm", name: "Myanmar" },
+    { code: "bd", name: "Bangladesh" }, { code: "pk", name: "Pakistan" }, { code: "lk", name: "Sri Lanka" },
+    { code: "np", name: "Nepal" }, { code: "mn", name: "Mongolia" }, { code: "kz", name: "Kazakhstan" },
+    { code: "ae", name: "UAE" }, { code: "sa", name: "Saudi Arabia" }, { code: "il", name: "Israel" },
+    { code: "tr", name: "Turkey" }, { code: "iq", name: "Iraq" }, { code: "jo", name: "Jordan" },
+    { code: "lb", name: "Lebanon" }, { code: "qa", name: "Qatar" }, { code: "kw", name: "Kuwait" },
+    { code: "om", name: "Oman" }, { code: "bh", name: "Bahrain" }, { code: "af", name: "Afghanistan" },
+    { code: "bt", name: "Bhutan" }, { code: "bn", name: "Brunei" }, { code: "ge", name: "Georgia" },
+    { code: "am", name: "Armenia" }, { code: "az", name: "Azerbaijan" },
+  ],
+  "Europe": [
+    { code: "uk", name: "United Kingdom" }, { code: "fr", name: "France" }, { code: "de", name: "Germany" },
+    { code: "it", name: "Italy" }, { code: "es", name: "Spain" }, { code: "pt", name: "Portugal" },
+    { code: "nl", name: "Netherlands" }, { code: "be", name: "Belgium" }, { code: "ch", name: "Switzerland" },
+    { code: "at", name: "Austria" }, { code: "se", name: "Sweden" }, { code: "no", name: "Norway" },
+    { code: "dk", name: "Denmark" }, { code: "fi", name: "Finland" }, { code: "is", name: "Iceland" },
+    { code: "ie", name: "Ireland" }, { code: "pl", name: "Poland" }, { code: "cz", name: "Czechia" },
+    { code: "sk", name: "Slovakia" }, { code: "hu", name: "Hungary" }, { code: "ro", name: "Romania" },
+    { code: "bg", name: "Bulgaria" }, { code: "gr", name: "Greece" }, { code: "hr", name: "Croatia" },
+    { code: "si", name: "Slovenia" }, { code: "rs", name: "Serbia" }, { code: "ba", name: "Bosnia" },
+    { code: "mk", name: "North Macedonia" }, { code: "al", name: "Albania" }, { code: "me", name: "Montenegro" },
+    { code: "ee", name: "Estonia" }, { code: "lv", name: "Latvia" }, { code: "lt", name: "Lithuania" },
+    { code: "by", name: "Belarus" }, { code: "ua", name: "Ukraine" }, { code: "md", name: "Moldova" },
+    { code: "ru", name: "Russia" }, { code: "lu", name: "Luxembourg" }, { code: "mt", name: "Malta" },
+    { code: "cy", name: "Cyprus" }, { code: "li", name: "Liechtenstein" }, { code: "mc", name: "Monaco" },
+    { code: "sm", name: "San Marino" }, { code: "ad", name: "Andorra" }, { code: "scotland", name: "Scotland" },
+  ],
+  "Africa": [
+    { code: "za", name: "South Africa" }, { code: "eg", name: "Egypt" }, { code: "ng", name: "Nigeria" },
+    { code: "ke", name: "Kenya" }, { code: "gh", name: "Ghana" }, { code: "ma", name: "Morocco" },
+    { code: "dz", name: "Algeria" }, { code: "tn", name: "Tunisia" }, { code: "ly", name: "Libya" },
+    { code: "et", name: "Ethiopia" }, { code: "tz", name: "Tanzania" }, { code: "ug", name: "Uganda" },
+    { code: "zw", name: "Zimbabwe" }, { code: "zm", name: "Zambia" }, { code: "mz", name: "Mozambique" },
+    { code: "ao", name: "Angola" }, { code: "cm", name: "Cameroon" }, { code: "ci", name: "Ivory Coast" },
+    { code: "sn", name: "Senegal" }, { code: "ml", name: "Mali" }, { code: "so", name: "Somalia" },
+    { code: "sd", name: "Sudan" }, { code: "rw", name: "Rwanda" }, { code: "mg", name: "Madagascar" },
+    { code: "mu", name: "Mauritius" }, { code: "na", name: "Namibia" }, { code: "bw", name: "Botswana" },
+    { code: "gq", name: "Equatorial Guinea" }, { code: "lr", name: "Liberia" }, { code: "sl", name: "Sierra Leone" },
+    { code: "gm", name: "Gambia" }, { code: "sc", name: "Seychelles" }, { code: "ls", name: "Lesotho" },
+    { code: "sz", name: "Eswatini" }, { code: "bj", name: "Benin" }, { code: "tg", name: "Togo" },
+  ],
+  "Oceania": [
+    { code: "au", name: "Australia" }, { code: "nz", name: "New Zealand" }, { code: "fj", name: "Fiji" },
+    { code: "pg", name: "Papua New Guinea" }, { code: "sb", name: "Solomon Islands" }, { code: "vu", name: "Vanuatu" },
+    { code: "ws", name: "Samoa" }, { code: "to", name: "Tonga" }, { code: "ki", name: "Kiribati" },
+    { code: "fm", name: "Micronesia" }, { code: "pw", name: "Palau" }, { code: "mh", name: "Marshall Islands" },
+  ],
+  "North America": [
+    { code: "us", name: "United States" }, { code: "ca", name: "Canada" }, { code: "mx", name: "Mexico" },
+    { code: "gt", name: "Guatemala" }, { code: "bz", name: "Belize" }, { code: "hn", name: "Honduras" },
+    { code: "sv", name: "El Salvador" }, { code: "ni", name: "Nicaragua" }, { code: "cr", name: "Costa Rica" },
+    { code: "pa", name: "Panama" }, { code: "cu", name: "Cuba" }, { code: "jm", name: "Jamaica" },
+    { code: "ht", name: "Haiti" }, { code: "do", name: "Dominican Republic" }, { code: "bs", name: "Bahamas" },
+    { code: "tt", name: "Trinidad and Tobago" }, { code: "bb", name: "Barbados" }, { code: "pr", name: "Puerto Rico" },
+  ],
+  "South America": [
+    { code: "br", name: "Brazil" }, { code: "ar", name: "Argentina" }, { code: "cl", name: "Chile" },
+    { code: "co", name: "Colombia" }, { code: "pe", name: "Peru" }, { code: "ve", name: "Venezuela" },
+    { code: "ec", name: "Ecuador" }, { code: "bo", name: "Bolivia" }, { code: "py", name: "Paraguay" },
+    { code: "uy", name: "Uruguay" }, { code: "gy", name: "Guyana" }, { code: "sr", name: "Suriname" },
+  ],
+};
+
+// ボタンとして表示する地域(南アメリカは記録が無いため除外)
+const SELECTABLE_REGIONS = ["Asia", "Europe", "Africa", "Oceania", "North America"];
+
+// 国コード → 地域名 の逆引き
+const COUNTRY_TO_REGION = {};
+Object.keys(REGION_DATA).forEach(region => {
+  REGION_DATA[region].forEach(c => { COUNTRY_TO_REGION[c.code] = region; });
+});
+
+// { type: 'all' | 'region' | 'country', value: null | 地域名 | 国コード }
+let countryFilter = { type: 'all', value: null };
+
+function countryMatchesFilter(countryCode) {
+  if (countryFilter.type === 'all') return true;
+  if (!countryCode || countryCode === '-') return false;
+  const code = countryCode.toLowerCase();
+  if (countryFilter.type === 'country') {
+    if (countryFilter.value === 'uk' && code === 'scotland') return true; // UK選択時はScotlandも含める
+    return code === countryFilter.value;
+  }
+  if (countryFilter.type === 'region') return COUNTRY_TO_REGION[code] === countryFilter.value;
+  return true;
+}
+
+function openCountryFilterMenu() {
+  document.getElementById('country-filter-overlay').classList.add('visible');
+  showRegionList();
+}
+function closeCountryFilterMenu() {
+  document.getElementById('country-filter-overlay').classList.remove('visible');
+}
+
+function showRegionList() {
+  document.getElementById('cf-title').innerText = 'Filter by Region';
+  document.getElementById('cf-back-btn').classList.remove('visible');
+  const list = document.getElementById('cf-list');
+  list.innerHTML = '';
+
+  const allItem = document.createElement('div');
+  allItem.className = 'cf-item all-item' + (countryFilter.type === 'all' ? ' selected' : '');
+  allItem.innerText = 'All Regions';
+  allItem.onclick = () => applyCountryFilter('all', null);
+  list.appendChild(allItem);
+
+  SELECTABLE_REGIONS.forEach(region => {
+    const isSelected = countryFilter.type === 'region' && countryFilter.value === region;
+    const item = document.createElement('div');
+    item.className = 'cf-item' + (isSelected ? ' selected' : '');
+    item.innerText = region;
+    item.onclick = () => showCountryList(region);
+    list.appendChild(item);
+  });
+}
+
+function showCountryList(region) {
+  document.getElementById('cf-title').innerText = region;
+  document.getElementById('cf-back-btn').classList.add('visible');
+  const list = document.getElementById('cf-list');
+  list.innerHTML = '';
+
+  const allItem = document.createElement('div');
+  allItem.className = 'cf-item all-item' + (countryFilter.type === 'region' && countryFilter.value === region ? ' selected' : '');
+  allItem.innerText = `All of ${region}`;
+  allItem.onclick = () => applyCountryFilter('region', region);
+  list.appendChild(allItem);
+
+  REGION_DATA[region].forEach(c => {
+    const isSelected = countryFilter.type === 'country' && countryFilter.value === c.code;
+    const flagSrc = c.code === 'scotland' ? 'Scotland.webp' : `${FLAG_BASE_URL}${c.code}.svg`;
+    const item = document.createElement('div');
+    item.className = 'cf-item' + (isSelected ? ' selected' : '');
+    item.innerHTML = `<img src="${flagSrc}" onerror="this.style.visibility='hidden'">${c.name}`;
+    item.onclick = () => applyCountryFilter('country', c.code);
+    list.appendChild(item);
+  });
+}
+
+function applyCountryFilter(type, value) {
+  countryFilter = { type, value };
+  closeCountryFilterMenu();
+  updateCountryFilterButtonState();
+  refreshCurrentFilterableView();
+}
+
+function updateCountryFilterButtonState() {
+  const active = countryFilter.type !== 'all';
+  document.querySelectorAll('.earth-btn').forEach(btn => btn.classList.toggle('filter-active', active));
+}
+
+function refreshCurrentFilterableView() {
+  if (leaderboardActive) renderPlayerLeaderboard();
+  if (!rankingScreen.classList.contains('hidden')) renderRankingList();
+}
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+const GLITCH_COURSES = [
+  "GBA Bowser Castle 3",
+  "Volcano Beach Ruins",
+  "Metro Madness",
+  "GBA Bowser Castle 4",
+  "GCN Mushroom City",
+  "N64 Rainbow Road"
+];
+
+let globalRankingData = {};
+let currentTire = 'without';
+let isGlitch = false;
+let isReadMoreExpanded = false; 
+let activeCard = null, currentSelectedCourse = null, placeholderEl = null;
+let cardRects = new Map();
+
+const rawCsvData = [
+  { name: "Concord Town", file: "033_Concord_Town" }, { name: "N64 Mario Raceway", file: "034_N64_Mario_Raceway" }, { name: "Galvarny Falls", file: "035_Galvarny_Falls" }, { name: "GBA Sky Garden", file: "036_GBA_Sky_Garden" },
+  { name: "Autumn Forest", file: "037_Autumn_Forest" }, { name: "GBA Riverside Park", file: "038_GBA_Riverside_Park" }, { name: "RMX Mario Circuit 1", file: "039_RMX_Mario_Circuit_1" }, { name: "GBA Bowser Castle 3", file: "040_GBA_Bowser_Castle_3" },
+  { name: "N64 Frappe Snowland", file: "041_N64_Frappe_Snowland" }, { name: "N64 Moo Moo Farm", file: "042_N64_Moo_Moo_Farm" }, { name: "DS Delfino Square", file: "043_DS_Delfino_Square" }, { name: "GCN Mario Circuit", file: "044_GCN_Mario_Circuit" },
+  { name: "Banshee Boardwalk 2", file: "045_Banshee_Boardwalk_2" }, { name: "Elemental Cave", file: "046_Elemental_Cave" }, { name: "SNES Ghost Valley 2", file: "047_SNES_Ghost_Valley_2" }, { name: "DS Cheep Cheep Beach", file: "048_DS_Cheep_Cheep_Beach" },
+  { name: "DS Tick Tock Clock", file: "049_DS_Tick_Tock_Clock" }, { name: "GCN Mushroom Bridge", file: "050_GCN_Mushroom_Bridge" }, { name: "DS Desert Hills", file: "051_DS_Desert_Hills" }, { name: "Castle of Time", file: "052_Castle_of_Time" },
+  { name: "DS Yoshi Falls", file: "053_DS_Yoshi_Falls" }, { name: "N64 Choco Mountain", file: "054_N64_Choco_Mountain" }, { name: "DS Shroom Ridge", file: "055_DS_Shroom_Ridge" }, { name: "CTR Crash Cove", file: "056_CTR_Crash_Cove" },
+  { name: "CTR Cortex Castle", file: "057_CTR_Cortex_Castle" }, { name: "Revo Circuit", file: "058_Revo_Circuit" }, { name: "SNES Choco Island 2", file: "059_SNES_Choco_Island_2" }, { name: "Star Slope", file: "060_Star_Slope" },
+  { name: "Sandcastle Park", file: "061_Sandcastle_Park" }, { name: "Jungle Ruins", file: "062_Jungle_Ruins" }, { name: "GCN Luigi Circuit", file: "063_GCN_Luigi_Circuit" }, { name: "Volcano Beach Ruins", file: "064_Volcano_Beach_Ruins" },
+  { name: "GCN Yoshi Circuit", file: "065_GCN_Yoshi_Circuit" }, { name: "GBA Peach Circuit", file: "066_GBA_Peach_Circuit" }, { name: "Metro Madness", file: "067_Metro_Madness" }, { name: "GBA Luigi Circuit", file: "068_GBA_Luigi_Circuit" },
+  { name: "SMO RC Challenge", file: "069_SMO_RC_Challenge" }, { name: "GBA Bowser Castle 4", file: "070_GBA_Bowser_Castle_4" }, { name: "RMX Donut Plains 1", file: "071_RMX_Donut_Plains_1" }, { name: "Secret Slide", file: "072_Secret_Slide" },
+  { name: "DS Wario Stadium", file: "073_DS_Wario_Stadium" }, { name: "Ermii Circuit", file: "074_Ermii_Circuit" }, { name: "GCN Baby Park", file: "075_GCN_Baby_Park" }, { name: "GCN Bowser Castle", file: "076_GCN_Bowser_Castle" },
+  { name: "SNES Mario Circuit 3", file: "077_SNES_Mario_Circuit_3" }, { name: "Big Blue", file: "078_Big_Blue" }, { name: "GBA Shy Guy Beach", file: "079_GBA_Shy_Guy_Beach" }, { name: "Bingo Party", file: "080_Bingo_Party" },
+  { name: "Stargaze Summit", file: "081_Stargaze_Summit" }, { name: "Sunset Raceway", file: "082_Sunset_Raceway" }, { name: "GBA Broken Pier", file: "083_GBA_Broken_Pier" }, { name: "Glacier Mine", file: "084_Glacier_Mine" },
+  { name: "Flowerbed Fortress", file: "085_Flowerbed_Fortress" }, { name: "Seaside Palace", file: "086_Seaside_Palace" }, { name: "DKR Star City", file: "087_DKR_Star_City" }, { name: "Mushroom Mountain", file: "088_Mushroom_Mountain" },
+  { name: "N64 Sherbet Land", file: "089_N64_Sherbet_Land" }, { name: "Block Island", file: "090_Block_Island" }, { name: "DS Bowser Castle", file: "091_DS_Bowser_Castle" }, { name: "DKR Jungle Falls", file: "092_DKR_Jungle_Falls" },
+  { name: "Retro Raceway", file: "093_Retro_Raceway" }, { name: "Frozen Grotto", file: "094_Frozen_Grotto" }, { name: "GBA Lakeside Park", file: "095_GBA_Lakeside_Park" }, { name: "Dragon Burial Grounds", file: "096_Dragon_Burial_Grounds" },
+  { name: "Warp Pipe Island", file: "097_Warp_Pipe_Island" }, { name: "Neo Metropolis", file: "098_Neo_Metropolis" }, { name: "Frosty Heights", file: "099_Frosty_Heights" }, { name: "Gnasty Gnorc's Lair", file: "100_Gnasty_Gnorc's_Lair" },
+  { name: "RMX Vanilla Lake 1", file: "101_RMX_Vanilla_Lake_1" }, { name: "Cliffside Circuit", file: "102_Cliffside_Circuit" }, { name: "Interstellar Laboratory", file: "103_Interstellar_Laboratory" }, { name: "Dark Matter Fortress", file: "104_Dark_Matter_Fortress" },
+  { name: "SNES Donut Plains 2", file: "105_SNES_Donut_Plains_2" }, { name: "Soaring Skyway", file: "106_Soaring_Skyway" }, { name: "N64 Bowser Castle", file: "107_N64_Bowser_Castle" }, { name: "Wii DK Summit", file: "108_Wii_DK_Summit" },
+  { name: "Painted Swamp Raceway", file: "109_Painted_Swamp_Raceway" }, { name: "Roulette Road", file: "110_Roulette_Road" }, { name: "Orbital Outpost", file: "111_Orbital_Outpost" }, { name: "DS Rainbow Road", file: "112_DS_Rainbow_Road" },
+  { name: "Coral Cape", file: "113_Coral_Cape" }, { name: "Wii Wario's Gold Mine", file: "114_Wii_Wario's_Gold_Mine" }, { name: "DS Peach Gardens", file: "115_DS_Peach_Gardens" }, { name: "Breezechill Citadel", file: "116_Breezechill_Citadel" },
+  { name: "Dark Sanctuary", file: "117_Dark_Sanctuary" }, { name: "Hell Pyramid", file: "118_Hell_Pyramid" }, { name: "GCN Mushroom City", file: "119_GCN_Mushroom_City" }, { name: "Dark Star Castle", file: "120_Dark_Star_Castle" },
+  { name: "Doge Desert", file: "121_Doge_Desert" }, { name: "N64 Banshee Boardwalk", file: "122_N64_Banshee_Boardwalk" }, { name: "N64 DK's Jungle Parkway", file: "123_N64_DK's_Jungle_Parkway" }, { name: "Miku's Birthday Spectacular 2", file: "124_Miku's_Birthday_Spectacular_2" },
+  { name: "N64 Rainbow Road", file: "125_N64_Rainbow_Road" }, { name: "GBA Rainbow Road", file: "126_GBA_Rainbow_Road" }, { name: "RMX Rainbow Road 1", file: "127_RMX_Rainbow_Road_1" }, { name: "Rainbow Road Deluxe", file: "128_Rainbow_Road_Deluxe" }
+];
+
+const cupScreen = document.getElementById('cup-select-screen');
+const rankingScreen = document.getElementById('ranking-screen');
+const container = document.getElementById('cupsContainer');
+const rankingListEl = document.getElementById('rankingList');
+const statusEl = document.getElementById('data-status');
+const videoModal = document.getElementById('video-modal');
+const youtubeFrame = document.getElementById('youtube-frame');
+const modalImage = document.getElementById('modal-image');
+const modalVideo = document.getElementById('modal-video'); 
+
+function openCategoryMenu() {
+  document.getElementById('mobile-category-overlay').classList.add('visible');
+}
+function closeCategoryMenu() {
+  document.getElementById('mobile-category-overlay').classList.remove('visible');
+}
+
+function openProfileCategoryMenu() {
+  document.getElementById('profile-mobile-category-overlay').classList.add('visible');
+}
+function closeProfileCategoryMenu() {
+  document.getElementById('profile-mobile-category-overlay').classList.remove('visible');
+}
+
+function switchCategory(cat) {
+  let key = cat;
+  if(key === '200cc' || key === 'Shroomless') key = 'Default';
+
+  if (allCategoryData[key]) {
+    globalRankingData = allCategoryData[key];
+    if (currentSelectedCourse) renderRankingList();
+  } else {
+    console.warn("Data not ready for " + key);
+  }
+}
+
+// ▼▼▼▼▼▼▼▼ プレイヤーリーダーボード ▼▼▼▼▼▼▼▼
+
+// 「Calc」タブ(gid=1119970158)を「ウェブに公開」したCSVから取得
+const PLAYER_LEADERBOARD_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vScYBDDVnDZcLrhBuS9Kg1fq60UTv3YDKeNBtwd0gepQ7Tz8QRg24IRmeteUWcrM7EiXEZwXeyEUFql/pub?gid=1119970158&single=true&output=csv";
+
+// URL未設定時 or 取得失敗時のフォールバック(取得確認時点のスナップショット)
+const FALLBACK_PLAYER_DATA = [
+  { rank: 1, name: "Jacob", points: 330 },
+  { rank: 2, name: "FanOfGiulia", points: 152 },
+  { rank: 3, name: "MrGhaddhab", points: 138 },
+  { rank: 4, name: "Pierre", points: 133 },
+  { rank: 5, name: "Samuel", points: 101 },
+  { rank: 6, name: "Leo", points: 94 },
+  { rank: 7, name: "Flotenchea", points: 81 },
+  { rank: 8, name: "thinecoolcat", points: 72 },
+  { rank: 9, name: "jack", points: 64 },
+  { rank: 10, name: "2AM", points: 54 },
+  { rank: 11, name: "Freak", points: 52 },
+  { rank: 11, name: "Sun", points: 52 },
+  { rank: 13, name: "Cams", points: 51 },
+  { rank: 14, name: "Fizz", points: 49 },
+  { rank: 15, name: "Venq", points: 48 },
+  { rank: 16, name: "KaiserClement", points: 47 },
+  { rank: 17, name: "Hgt", points: 39 },
+  { rank: 18, name: "0.crit CT", points: 35 },
+  { rank: 19, name: "Kayden", points: 33 },
+  { rank: 20, name: "Shinonome", points: 29 },
+  { rank: 21, name: "Sieg", points: 28 },
+  { rank: 22, name: "Wouter", points: 25 },
+  { rank: 23, name: "Clay", points: 20 },
+  { rank: 24, name: "Hugo", points: 18 },
+  { rank: 24, name: "K.K", points: 18 },
+  { rank: 26, name: "Jamie", points: 17 },
+  { rank: 27, name: "Yacine", points: 14 },
+  { rank: 28, name: "Yonezu Kenshi", points: 13 },
+  { rank: 29, name: "Thomas", points: 12 },
+  { rank: 30, name: "Cablivon", points: 11 },
+  { rank: 30, name: "IbrHyde", points: 11 },
+  { rank: 30, name: "tdz", points: 11 },
+  { rank: 33, name: "Pione", points: 10 },
+  { rank: 33, name: "Topaz", points: 10 },
+  { rank: 33, name: "Xins", points: 10 },
+  { rank: 36, name: "Alpha", points: 9 },
+  { rank: 36, name: "Anpanman", points: 9 },
+  { rank: 36, name: "Murray", points: 9 },
+  { rank: 39, name: "Leimul", points: 8 },
+  { rank: 40, name: "Endo", points: 7 },
+  { rank: 40, name: "RusTy", points: 7 },
+  { rank: 40, name: "Shawny", points: 7 },
+  { rank: 40, name: "ray703", points: 7 },
+  { rank: 44, name: "Loris", points: 6 },
+  { rank: 45, name: "Chilly", points: 5 },
+  { rank: 45, name: "Cyrus", points: 5 },
+  { rank: 45, name: "Demon", points: 5 },
+  { rank: 45, name: "Umineko", points: 5 },
+  { rank: 49, name: "78", points: 4 },
+  { rank: 49, name: "Beta", points: 4 },
+  { rank: 49, name: "Coa", points: 4 },
+  { rank: 49, name: "Herirm", points: 4 },
+  { rank: 49, name: "Paradox", points: 4 },
+  { rank: 49, name: "Ryan", points: 4 },
+  { rank: 49, name: "Sabrina", points: 4 },
+  { rank: 57, name: "Bapt", points: 3 },
+  { rank: 57, name: "Curren", points: 3 },
+  { rank: 57, name: "Rjohn1277", points: 3 },
+  { rank: 60, name: "Army", points: 2 },
+  { rank: 60, name: "Jakob", points: 2 },
+  { rank: 60, name: "Kazuo", points: 2 },
+  { rank: 60, name: "LG-X", points: 2 },
+  { rank: 60, name: "Logan", points: 2 },
+  { rank: 60, name: "Loyal", points: 2 },
+  { rank: 60, name: "Serena", points: 2 },
+  { rank: 60, name: "Shy Guy", points: 2 },
+  { rank: 60, name: "Tsurugi", points: 2 },
+  { rank: 60, name: "boneking", points: 2 },
+  { rank: 70, name: "Christian", points: 1 },
+  { rank: 70, name: "EC3★sunny", points: 1 },
+  { rank: 70, name: "SD", points: 1 },
+  { rank: 70, name: "Saber", points: 1 },
+  { rank: 70, name: "Sakito", points: 1 },
+  { rank: 70, name: "Topia", points: 1 },
+  { rank: 70, name: "「RING」", points: 1 },
+];
+
+let playerLeaderboardData = FALLBACK_PLAYER_DATA;
+
+// K列(プレイヤー名)/L列(ポイント)/M列(順位)を読み取る
+function parsePlayerLeaderboardCsv(csvText) {
+  const lines = csvText.trim().split(/\r?\n/);
+  const result = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cells = lines[i].split(',');
+    if (cells.length < 13) continue;
+    const name = cells[10] ? cells[10].trim() : '';
+    const points = cells[11] ? cells[11].trim() : '';
+    const rank = cells[12] ? cells[12].trim() : '';
+    if (name && points !== '' && rank !== '') {
+      result.push({ rank: parseInt(rank, 10), name, points: parseInt(points, 10) });
+    }
+  }
+  return result;
+}
+
+// 全カテゴリ(General/Flap/Mission/Default)の記録データからプレイヤー名→チャンネルURLの辞書を作る
+// プレイヤーリーダーボードに載る名前は、必ずどこかの記録に存在する前提
+let globalPlayerChannelMap = {};
+let globalPlayerCountryMap = {};
+
+function buildPlayerChannelMap() {
+  const map = {};
+  Object.values(allCategoryData).forEach(categoryData => {
+    Object.values(categoryData).forEach(track => {
+      ['without', 'dekatire'].forEach(mode => {
+        (track[mode] || []).forEach(entry => {
+          if (entry.name && entry.channel && entry.channel !== '-') {
+            map[entry.name] = entry.channel; // 空でない値が見つかるたび上書き(最後に見つかったものを採用)
+          }
+        });
+      });
+    });
+  });
+  return map;
+}
+
+function buildPlayerCountryMap() {
+  const map = {};
+  Object.values(allCategoryData).forEach(categoryData => {
+    Object.values(categoryData).forEach(track => {
+      ['without', 'dekatire'].forEach(mode => {
+        (track[mode] || []).forEach(entry => {
+          if (entry.name && entry.country && entry.country !== '-') {
+            map[entry.name] = entry.country.toLowerCase();
+          }
+        });
+      });
+    });
+  });
+  return map;
+}
+
+const leaderboardBtn = document.getElementById('leaderboard-btn');
+const leaderboardPanel = document.getElementById('leaderboard-panel');
+const playerRankingListEl = document.getElementById('playerRankingList');
+let leaderboardActive = false;
+
+function renderPlayerLeaderboard() {
+  playerRankingListEl.innerHTML = '';
+  const filteredData = playerLeaderboardData.filter(p => countryMatchesFilter(globalPlayerCountryMap[p.name]));
+  filteredData.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = `player-row ${p.rank === 1 ? 'rank-1st' : ''} animate-slide-in`;
+    row.style.animationDelay = `${Math.min(i + 1, 20) * 0.03}s`;
+
+    let rankContent;
+    if (p.rank <= 8) {
+      rankContent = `<img src="${RANK_IMG_BASE}${p.rank}${RANK_EXT}" onerror="this.style.display='none';this.parentElement.innerText='${p.rank}'">`;
+    } else {
+      rankContent = `${p.rank}`;
+    }
+
+    const safeName = p.name.replace(/'/g, "\\'");
+    let nameHtml = `<a href="/player/${encodeURIComponent(p.name)}" class="name-link" onclick="event.preventDefault();event.stopPropagation();openPlayerProfile('${safeName}', this)">${p.name}</a>`;
+
+    row.innerHTML = `
+      <div class="pr-rank">${rankContent}</div>
+      <div class="pr-name">${nameHtml}</div>
+      <div class="pr-points">${p.points} pt</div>
+    `;
+    row.addEventListener('click', (e) => {
+      if (e.target.closest('.name-link')) return; // 名前リンクは外部チャンネルへ(そのまま)
+      openPlayerProfile(p.name, row);
+    });
+    playerRankingListEl.appendChild(row);
+  });
+}
+
+function openLeaderboard() {
+  const rect = leaderboardBtn.getBoundingClientRect();
+  cardRects.set('leaderboard-panel', rect);
+
+  leaderboardPanel.classList.remove('hidden');
+  leaderboardPanel.style.position = 'fixed';
+  leaderboardPanel.style.top = rect.top + 'px';
+  leaderboardPanel.style.left = rect.left + 'px';
+  leaderboardPanel.style.width = rect.width + 'px';
+  leaderboardPanel.style.height = rect.height + 'px';
+  leaderboardPanel.style.margin = '0';
+
+  document.body.classList.add('mode-expanded');
+  leaderboardActive = true;
+
+  renderPlayerLeaderboard();
+
+  setTimeout(() => {
+    leaderboardPanel.classList.add('active-panel');
+    leaderboardPanel.style.top = '50%';
+    leaderboardPanel.style.left = '50%';
+    leaderboardPanel.style.width = 'min(700px, 92vw)';
+    leaderboardPanel.style.height = 'min(80vh, 750px)';
+    leaderboardPanel.style.transform = 'translate(-50%, -50%)';
+  }, 10);
+}
+
+function closeLeaderboard() {
+  const rect = cardRects.get('leaderboard-panel');
+  leaderboardPanel.classList.remove('active-panel');
+  document.body.classList.remove('mode-expanded');
+  leaderboardPanel.style.top = rect.top + 'px';
+  leaderboardPanel.style.left = rect.left + 'px';
+  leaderboardPanel.style.width = rect.width + 'px';
+  leaderboardPanel.style.height = rect.height + 'px';
+  leaderboardPanel.style.transform = '';
+
+  setTimeout(() => {
+    leaderboardPanel.style = '';
+    leaderboardPanel.classList.add('hidden');
+    leaderboardActive = false;
+  }, 600);
+}
+
+// 画面右上×ボタン: プロフィール > リーダーボード の優先度で閉じる。どちらも無ければカップカードを閉じる
+function handleGlobalClose() {
+  if (playerProfileActive) closePlayerProfile();
+  else if (leaderboardActive) closeLeaderboard();
+  else resetCard();
+}
+
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+// ▼▼▼▼▼▼▼▼ プレイヤープロフィールページ(/player/名前) ▼▼▼▼▼▼▼▼
+
+const playerProfilePanel = document.getElementById('player-profile-panel');
+const ppNameEl = document.getElementById('pp-name');
+const ppRecordListEl = document.getElementById('ppRecordList');
+let playerProfileActive = false;
+let currentProfileName = null;
+let currentProfileCategory = 'General';
+let currentProfileSortMode = 'course'; // 'course' または 'rank'
+
+// 全カテゴリ・全トラック・両タイヤモードから該当プレイヤーの記録を集める
+// 全コース(rawCsvData)を基準に、そのプレイヤーの記録があれば埋め込み、無ければnullのまま返す
+// (dekatireモードは対象外。通常タイヤの記録のみを見る)
+function getPlayerCourseRows(name, catKey) {
+  let key = catKey;
+  if (key === '200cc' || key === 'Shroomless') key = 'Default';
+  const categoryData = allCategoryData[key] || {};
+
+  return rawCsvData.map(course => {
+    const trackKey = course.file.substring(4);
+    const trackData = categoryData[trackKey];
+    const entry = trackData ? (trackData.without || []).find(e => e.name === name) : null;
+    return {
+      trackName: course.name,
+      course: course,
+      rank: entry ? entry.rank : null,
+      time: entry ? entry.time : null,
+      video: entry ? entry.video : null,
+    };
+  });
+}
+
+function renderPlayerProfileRecords() {
+  let rows = getPlayerCourseRows(currentProfileName, currentProfileCategory);
+
+  if (currentProfileSortMode === 'rank') {
+    rows = [...rows].sort((a, b) => {
+      if (a.rank === null && b.rank === null) return 0;
+      if (a.rank === null) return 1;  // 記録なしは末尾へ
+      if (b.rank === null) return -1;
+      return a.rank - b.rank;
+    });
+  }
+
+  ppRecordListEl.innerHTML = '';
+
+  rows.forEach((r, i) => {
+    const hasRecord = r.rank !== null;
+    const row = document.createElement('div');
+    row.className = `record-row ${hasRecord && r.rank === 1 ? 'gold-rank' : ''} animate-slide-in`;
+    row.style.animationDelay = `${Math.min(i + 1, 25) * 0.02}s`;
+
+    let rankContent = '-';
+    if (hasRecord) {
+      if (r.rank <= 8) {
+        rankContent = `<img src="${RANK_IMG_BASE}${r.rank}${RANK_EXT}" onerror="this.style.display='none';this.parentElement.innerText='${r.rank}'">`;
+      } else {
+        rankContent = `${r.rank}`;
+      }
+    }
+
+    let iconHtml = `<img src="Novideo.webp">`;
+    let timeHtml = hasRecord ? r.time : '-';
+    if (hasRecord && r.video && r.video !== '-') {
+      const iconSrc = getVideoIcon(r.video);
+      const isModalTarget = (iconSrc === 'Youtube.webp' || iconSrc === 'Discord.webp' || iconSrc === 'Filenow.webp');
+      const safeUrl = String(r.video).replace(/'/g, "\\'");
+      const safeHref = String(r.video).replace(/"/g, '&quot;');
+      // タイムは常に新しいタブで開く直リンク(コースランキングと同じ挙動)
+      timeHtml = `<a href="${safeHref}" target="_blank" rel="noopener" class="time-link">${r.time}</a>`;
+      if (isModalTarget) {
+        iconHtml = `<div onclick="openVideoModal('${safeUrl}')" style="cursor:pointer"><img src="${iconSrc}" onerror="this.src='Novideo.webp'"></div>`;
+      } else {
+        iconHtml = `<a href="${safeHref}" target="_blank" rel="noopener"><img src="${iconSrc}" onerror="this.src='Novideo.webp'"></a>`;
+      }
+    }
+
+    row.innerHTML = `
+      <div class="rr-rank">${rankContent}</div>
+      <div class="rr-track course-jump">${r.trackName}</div>
+      <div class="rr-time">${timeHtml}</div>
+      <div class="rr-icon">${iconHtml}</div>
+    `;
+    row.querySelector('.rr-track').addEventListener('click', () => jumpToCourseFromProfile(r.course));
+    ppRecordListEl.appendChild(row);
+  });
+}
+
+// プロフィールを即座に閉じ、選択中カテゴリのデータでそのコースのランキング画面へ移動する
+function jumpToCourseFromProfile(course) {
+  const cat = currentProfileCategory;
+  playerProfilePanel.classList.remove('active-panel');
+  playerProfilePanel.classList.add('hidden');
+  playerProfilePanel.style.cssText = '';
+  playerProfileActive = false;
+  document.body.classList.remove('mode-expanded');
+  history.pushState({}, '', '/');
+
+  switchCategory(cat);          // 'Default'へのマッピングはswitchCategory内で処理される
+  showRankingScreen(course);
+}
+
+function switchProfileCategory(cat) {
+  currentProfileCategory = cat;
+  document.querySelectorAll('.pp-tab').forEach(t => t.classList.toggle('selected', t.dataset.cat === cat));
+  renderPlayerProfileRecords();
+}
+
+function setProfileSortMode(mode) {
+  currentProfileSortMode = mode;
+  document.querySelectorAll('.sort-toggle-option').forEach(el => el.classList.toggle('selected', el.dataset.sort === mode));
+  renderPlayerProfileRecords();
+}
+
+// originEl: クリック元の要素(FLIPアニメーションの起点)。直接URLアクセス時はnull
+function openPlayerProfile(name, originEl, pushState = true) {
+  // リーダーボードが開いたままだと2枚のパネルが重なって表示されてしまうので、先に閉じる
+  if (leaderboardActive) {
+    leaderboardPanel.classList.remove('active-panel');
+    leaderboardPanel.classList.add('hidden');
+    leaderboardPanel.style.cssText = '';
+    leaderboardActive = false;
+  }
+
+  currentProfileName = name;
+  currentProfileCategory = 'General';
+  currentProfileSortMode = 'course';
+  const channelUrl = globalPlayerChannelMap[name];
+  if (channelUrl) {
+    ppNameEl.innerHTML = `<a href="${channelUrl.replace(/"/g, '&quot;')}" target="_blank" rel="noopener" class="name-link">${name}</a>`;
+  } else {
+    ppNameEl.innerText = name;
+  }
+  document.querySelectorAll('.pp-tab').forEach(t => t.classList.toggle('selected', t.dataset.cat === 'General'));
+  document.querySelectorAll('.sort-toggle-option').forEach(el => el.classList.toggle('selected', el.dataset.sort === 'course'));
+
+  playerProfilePanel.classList.remove('hidden');
+  playerProfilePanel.style.position = 'fixed';
+  playerProfilePanel.style.margin = '0';
+
+  if (originEl) {
+    const rect = originEl.getBoundingClientRect();
+    cardRects.set('player-profile-panel', rect);
+    playerProfilePanel.style.top = rect.top + 'px';
+    playerProfilePanel.style.left = rect.left + 'px';
+    playerProfilePanel.style.width = rect.width + 'px';
+    playerProfilePanel.style.height = rect.height + 'px';
+    playerProfilePanel.style.opacity = '1';
+  } else {
+    cardRects.delete('player-profile-panel');
+    playerProfilePanel.style.top = '50%';
+    playerProfilePanel.style.left = '50%';
+    playerProfilePanel.style.width = 'min(700px, 92vw)';
+    playerProfilePanel.style.height = 'min(80vh, 750px)';
+    playerProfilePanel.style.transform = 'translate(-50%, -50%)';
+    playerProfilePanel.style.opacity = '0';
+  }
+
+  document.body.classList.add('mode-expanded');
+  playerProfileActive = true;
+
+  renderPlayerProfileRecords();
+
+  requestAnimationFrame(() => {
+    setTimeout(() => {
+      playerProfilePanel.classList.add('active-panel');
+      playerProfilePanel.style.top = '50%';
+      playerProfilePanel.style.left = '50%';
+      playerProfilePanel.style.width = 'min(700px, 92vw)';
+      playerProfilePanel.style.height = 'min(80vh, 750px)';
+      playerProfilePanel.style.transform = 'translate(-50%, -50%)';
+      playerProfilePanel.style.opacity = '1';
+    }, 10);
+  });
+
+  if (pushState) {
+    history.pushState({ player: name }, '', '/player/' + encodeURIComponent(name));
+  }
+}
+
+function closePlayerProfile(skipHistory) {
+  const rect = cardRects.get('player-profile-panel');
+  playerProfilePanel.classList.remove('active-panel');
+  document.body.classList.remove('mode-expanded');
+
+  if (rect) {
+    playerProfilePanel.style.top = rect.top + 'px';
+    playerProfilePanel.style.left = rect.left + 'px';
+    playerProfilePanel.style.width = rect.width + 'px';
+    playerProfilePanel.style.height = rect.height + 'px';
+    playerProfilePanel.style.transform = '';
+  } else {
+    playerProfilePanel.style.opacity = '0';
+  }
+
+  setTimeout(() => {
+    playerProfilePanel.style = '';
+    playerProfilePanel.classList.add('hidden');
+    playerProfileActive = false;
+  }, 600);
+
+  if (!skipHistory) {
+    history.pushState({}, '', '/');
+  }
+}
+
+// 直接 /player/名前 でアクセスされた場合に該当プロフィールを開く
+function checkInitialPlayerRoute() {
+  const match = window.location.pathname.match(/^\/player\/([^\/]+)\/?$/);
+  if (match) {
+    openPlayerProfile(decodeURIComponent(match[1]), null, false);
+  }
+}
+
+// ブラウザの戻る/進むボタン対応
+window.addEventListener('popstate', () => {
+  const match = window.location.pathname.match(/^\/player\/([^\/]+)\/?$/);
+  if (match) {
+    const name = decodeURIComponent(match[1]);
+    if (!(playerProfileActive && currentProfileName === name)) {
+      openPlayerProfile(name, null, false);
+    }
+  } else if (playerProfileActive) {
+    closePlayerProfile(true);
+  }
+});
+
+// ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
+async function startLoadingProcess() {
+  // Default / Flap / Mission はCSVから取得
+  const csvPromises = Object.keys(CSV_URLS).map(async (key) => {
+    const url = CSV_URLS[key];
+    try {
+      const res = await fetch(url + "&t=" + Date.now());
+      if (!res.ok) throw new Error(`Failed to load ${key}`);
+      const text = await res.text();
+      allCategoryData[key] = parseRankingCsv(text);
+    } catch (e) {
+      console.warn(e);
+      allCategoryData[key] = {};
+    } finally {
+      updateProgress();
+    }
+  });
+
+  // General は Supabase から取得
+  const supabasePromise = (async () => {
+    try {
+      const res = await fetch(
+        SUPABASE_URL + '/rest/v1/times?category=eq.General&order=track_name,rank&limit=5000',
+        {
+          headers: {
+            'apikey': SUPABASE_KEY,
+            'Authorization': 'Bearer ' + SUPABASE_KEY,
+          }
+        }
+      );
+      if (!res.ok) throw new Error('Failed to load General from Supabase');
+      const rows = await res.json();
+
+      const generalData = {};
+      for (const row of rows) {
+        const track = row.track_name;
+        if (!generalData[track]) {
+          generalData[track] = { without: [], dekatire: [] };
+        }
+        generalData[track]['without'].push({
+          rank:    row.rank,
+          name:    row.player,
+          time:    row.time    || '-',
+          video:   row.video   || '-',
+          channel: row.channel || '-',
+          country: row.country || '-',
+        });
+      }
+      allCategoryData['General'] = generalData;
+    } catch (e) {
+      console.warn(e);
+      allCategoryData['General'] = {};
+    } finally {
+      updateProgress();
+    }
+  })();
+
+  // プレイヤーリーダーボードは公開CSV(K:M列)から取得
+  const playerLeaderboardPromise = (async () => {
+    if (!PLAYER_LEADERBOARD_CSV_URL) {
+      console.warn('PLAYER_LEADERBOARD_CSV_URL is not set, using fallback data.');
+      updateProgress();
+      return;
+    }
+    try {
+      const res = await fetch(PLAYER_LEADERBOARD_CSV_URL + "&t=" + Date.now());
+      if (!res.ok) throw new Error('Failed to load player leaderboard CSV');
+      const text = await res.text();
+      const parsed = parsePlayerLeaderboardCsv(text);
+      if (parsed.length > 0) playerLeaderboardData = parsed;
+    } catch (e) {
+      console.warn(e);
+    } finally {
+      updateProgress();
+    }
+  })();
+
+  await Promise.all([...csvPromises, supabasePromise, playerLeaderboardPromise]);
+
+  // 記録データが揃ったので、プレイヤーリーダーボードの名前にチャンネルURL・国を紐付ける
+  globalPlayerChannelMap = buildPlayerChannelMap();
+  globalPlayerCountryMap = buildPlayerCountryMap();
+  playerLeaderboardData.forEach(p => { p.link = globalPlayerChannelMap[p.name] || null; });
+
+  switchCategory('General');
+  checkInitialPlayerRoute();
+}
+
+document.addEventListener('paste', (e) => {
+  const data = (e.clipboardData || window.clipboardData).getData('text');
+  if (data && (data.includes(',') || data.includes('TrackName'))) {
+    globalRankingData = parseRankingCsv(data);
+    if (currentSelectedCourse) renderRankingList();
+    alert("Data pasted!");
+  }
+});
+
+function parseRankingCsv(csvText) {
+  const lines = csvText.trim().split(/\r?\n/);
+  let currentTrackKey = null;
+  const resultData = {}; 
+
+  const getCell = (val) => {
+    if (!val) return '-';
+    const s = val.trim();
+    return s === '' ? '-' : s;
+  };
+
+  for (let i = 1; i < lines.length; i++) {
+    const cells = lines[i].split(',');
+    if (cells.length < 2) continue;
+    
+    const track = cells[0].trim();
+    let mode = 'without';
+
+    if (track && track !== '-') { 
+      currentTrackKey = track; 
+    } else if (currentTrackKey) { 
+      mode = 'dekatire';
+    } else {
+      continue;
+    }
+
+    if (!resultData[currentTrackKey]) resultData[currentTrackKey] = { without: [], dekatire: [] };
+
+    for (let r = 0; r < 100; r++) {
+      const idx = 1 + (r * 5); 
+      if (idx + 4 >= cells.length) break;
+      const name = cells[idx] ? cells[idx].trim() : '-';
+      
+      if (name && name !== '-' && name !== '') {
+        resultData[currentTrackKey][mode].push({
+          rank: r + 1,
+          name: name,
+          time: getCell(cells[idx+1]),
+          video: getCell(cells[idx+2]),
+          channel: getCell(cells[idx+3]),
+          country: getCell(cells[idx+4])
+        });
+      }
+    }
+  }
+  return resultData;
+}
+
+rawCsvData.forEach((course, i) => {
+  if (i % COURSES_PER_CUP === 0) {
+    const cupIdx = i / COURSES_PER_CUP;
+    const card = document.createElement('div');
+    card.className = 'cup-card';
+    card.id = `card-${i}`;
+    card.onclick = () => { if (!card.classList.contains('active')) expandCard(card); };
+    
+    const grid = document.createElement('div');
+    grid.className = 'course-grid';
+    rawCsvData.slice(i, i + COURSES_PER_CUP).forEach(c => {
+      const w = document.createElement('div');
+      w.className = 'course-img-wrapper';
+      w.onclick = (e) => { if (card.classList.contains('active')) { e.stopPropagation(); showRankingScreen(c); } };
+      w.innerHTML = `<img src="${c.file}.webp" loading="lazy" decoding="async" onerror="this.style.display='none'">`;
+      grid.appendChild(w);
+    });
+    
+    const icon = document.createElement('div');
+    icon.className = 'cup-icon-wrapper';
+    icon.innerHTML = `<img src="${ICON_BASE_PATH}${cupIdx + 9}.webp" loading="lazy" decoding="async">`;
+    card.append(grid, icon);
+    container.appendChild(card);
+  }
+});
+
+function expandCard(card) {
+  const rect = card.getBoundingClientRect();
+  cardRects.set(card.id, rect);
+  
+  placeholderEl = document.createElement('div');
+  placeholderEl.className = 'cup-card-placeholder';
+  placeholderEl.style.width = rect.width + 'px'; placeholderEl.style.height = rect.height + 'px';
+  placeholderEl.onclick = resetCard;
+  
+  card.parentNode.insertBefore(placeholderEl, card);
+  
+  card.style.position = 'fixed'; card.style.top = rect.top + 'px'; card.style.left = rect.left + 'px';
+  card.style.width = rect.width + 'px'; card.style.height = rect.height + 'px'; card.style.margin = '0';
+  
+  document.body.classList.add('mode-expanded');
+  
+  setTimeout(() => {
+    card.classList.add('active');
+    card.style.top = '50%'; card.style.left = '50%';
+    card.style.width = `${rect.width * SCALE_FACTOR + SIDEBAR_WIDTH + 50}px`; 
+    card.style.height = `${rect.height * SCALE_FACTOR + 25}px`;
+    card.style.transform = 'translate(-50%, -50%)';
+    activeCard = card;
+  }, 10);
+}
+
+function resetCard() {
+  if (!activeCard) return;
+  const c = activeCard;
+  const r = cardRects.get(c.id);
+  c.classList.remove('active');
+  document.body.classList.remove('mode-expanded');
+  c.style.top = r.top + 'px'; c.style.left = r.left + 'px'; c.style.width = r.width + 'px'; c.style.height = r.height + 'px'; c.style.transform = '';
+  
+  setTimeout(() => {
+    c.style = '';
+    if (placeholderEl) { placeholderEl.remove(); placeholderEl = null; }
+    activeCard = null;
+  }, 600);
+}
+
+function showRankingScreen(c) {
+  currentSelectedCourse = c;
+  
+  currentTire = 'without';
+  isGlitch = false;
+  isReadMoreExpanded = false; 
+  updateToggleUI();
+
+  document.body.classList.remove('mode-expanded');
+
+  cupScreen.classList.add('hidden');
+  rankingScreen.classList.remove('hidden');
+  document.getElementById('ranking-course-title').innerText = c.name;
+
+  const glitchBtn = document.getElementById('glitch-btn');
+  if (GLITCH_COURSES.includes(c.name)) {
+    glitchBtn.classList.remove('hidden');
+  } else {
+    glitchBtn.classList.add('hidden');
+  }
+
+  renderRankingList();
+  window.scrollTo(0,0);
+}
+
+function goBackToCups() { 
+  rankingScreen.classList.add('hidden'); 
+  cupScreen.classList.remove('hidden'); 
+  currentSelectedCourse = null;
+
+  if (activeCard) {
+    document.body.classList.add('mode-expanded');
+  }
+}
+
+function toggleMode() {
+  currentTire = (currentTire === 'without') ? 'dekatire' : 'without';
+  updateToggleUI();
+  renderRankingList();
+}
+
+function toggleGlitchMode() {
+  isGlitch = !isGlitch;
+  updateToggleUI();
+  renderRankingList();
+}
+
+function toggleReadMore() {
+  isReadMoreExpanded = true;
+  renderRankingList();
+}
+
+function updateToggleUI() {
+  const optWithout = document.getElementById('opt-without');
+  const optDekatire = document.getElementById('opt-dekatire');
+  const btnGlitch = document.getElementById('glitch-btn');
+
+  optWithout.classList.remove('selected');
+  optDekatire.classList.remove('selected');
+  btnGlitch.classList.remove('active');
+  
+  if (currentTire === 'without') optWithout.classList.add('selected');
+  else optDekatire.classList.add('selected');
+  
+  if (isGlitch) btnGlitch.classList.add('active');
+}
+
+function renderRankingList() {
+  rankingListEl.innerHTML = '';
+  
+  let key = currentSelectedCourse.file.substring(4);
+  if (isGlitch) {
+    key += "_G";
+  }
+
+  let data = [];
+  if (globalRankingData[key]) {
+    data = globalRankingData[key][currentTire] || [];
+  }
+  data = data.filter(d => countryMatchesFilter(d.country));
+  
+  const displayCount = isReadMoreExpanded ? data.length : 8;
+  
+  for (let i = 0; i < displayCount; i++) {
+    const d = data[i] || (i < 8 ? { rank: i+1, name: "---", time: "--:--", video: "-", channel: "-", country: "-" } : null);
+    if (!d) continue;
+
+    const row = document.createElement('div');
+    row.className = `rank-row ${d.rank===1 ? 'rank-1st' : ''} animate-slide-in`;
+    row.style.animationDelay = `${(i+1)*0.04}s`;
+    
+    const iconSrc = getVideoIcon(d.video);
+    const hasVid = (d.video !== '-' && d.video !== '' && iconSrc !== 'Novideo.webp');
+    const safeUrl = d.video.replace(/'/g, "\\'");
+    
+    let flagHtml = '';
+    if (d.country && d.country !== '-') {
+      const countryCode = d.country.toLowerCase();
+      if (countryCode === 'scotland') {
+        flagHtml = `<img src="Scotland.webp" onerror="this.style.visibility='hidden'">`;
+      } else {
+        flagHtml = `<img src="${FLAG_BASE_URL}${countryCode}.svg" onerror="this.style.visibility='hidden'">`;
+      }
+    }
+
+    const safeName = d.name.replace(/'/g, "\\'");
+    let nameHtml = d.name;
+    if (d.name !== '---') {
+      nameHtml = `<a href="/player/${encodeURIComponent(d.name)}" class="name-link" onclick="event.preventDefault();openPlayerProfile('${safeName}', this)">${d.name}</a>`;
+    }
+
+    const isModalTarget = (iconSrc === 'Youtube.webp' || iconSrc === 'Discord.webp' || iconSrc === 'Filenow.webp');
+    const timeHtml = hasVid 
+      ? `<a href="${d.video}" target="_blank" class="time-link">${d.time}</a>`
+      : d.time;
+
+    let rankContent = '';
+    if (d.rank <= 8) {
+        rankContent = `<img src="${RANK_IMG_BASE}${d.rank}${RANK_EXT}" onerror="this.style.display='none';this.parentElement.innerText='${d.rank}'">`;
+    } else {
+        rankContent = `<span style="font-size: 1.5rem; font-weight: bold; font-family: 'Arial', sans-serif;">${d.rank}</span>`;
+    }
+
+    let iconHtml = `<div class="no-link"><img src="Novideo.webp"></div>`;
+    if (hasVid) {
+      if (isModalTarget) {
+        iconHtml = `<div onclick="openVideoModal('${safeUrl}')" style="cursor:pointer"><img src="${iconSrc}"></div>`;
+      } else {
+        iconHtml = `<a href="${d.video}" target="_blank"><img src="${iconSrc}"></a>`;
+      }
+    }
+
+    row.innerHTML = `
+      <div class="section col-rank">${rankContent}</div>
+      <div class="section col-name">${nameHtml}</div>
+      <div class="section col-time">${timeHtml}</div>
+      <div class="section col-icon">${iconHtml}</div>
+      <div class="section col-flag">${flagHtml}</div>
+    `;
+    rankingListEl.appendChild(row);
+  }
+
+  if (!isReadMoreExpanded && data.length > 8) {
+    const btn = document.createElement('div');
+    btn.className = 'read-more-btn animate-slide-in';
+    btn.innerText = '▼ Load more ▼';
+    btn.onclick = toggleReadMore;
+    rankingListEl.appendChild(btn);
+  }
+}
+
+function getVideoIcon(url) {
+  if (!url || url==='-') return 'Novideo.webp';
+  const l = url.toLowerCase();
+  if (l.includes('youtube') || l.includes('youtu.be') || l.includes('archive')) return 'Youtube.webp';
+  if (l.includes('twitter') || l.includes('x.com')) return 'X.webp';
+  if (l.includes('d.kuku.lu')) return 'Filenow.webp';
+  if (l.includes('discord')) return 'Discord.webp';
+  return 'Novideo.webp';
+}
+
+function openVideoModal(url) {
+  youtubeFrame.style.display = 'none'; youtubeFrame.src = "";
+  modalImage.style.display = 'none'; modalImage.src = "";
+  modalVideo.style.display = 'none'; modalVideo.src = "";
+
+  // archiveを含むリンクは無条件で動画としてモーダル表示
+  if (url.toLowerCase().includes('archive')) {
+    modalVideo.src = url;
+    modalVideo.style.display = 'block';
+    videoModal.classList.add('visible');
+    return;
+  }
+
+  let vid = null;
+  try {
+    const u = new URL(url);
+    if (u.hostname === 'youtu.be') {
+      vid = u.pathname.slice(1);
+    } else if (u.hostname.includes('youtube')) {
+      if (u.searchParams.get('v')) {
+        vid = u.searchParams.get('v');
+      } else {
+        const shortsMatch = u.pathname.match(/\/shorts\/([a-zA-Z0-9_-]+)/);
+        if (shortsMatch) vid = shortsMatch[1];
+      }
+    }
+  } catch(e){}
+  
+  if (vid) { 
+    youtubeFrame.src = `https://www.youtube.com/embed/${vid}?autoplay=1`; 
+    youtubeFrame.style.display = 'block';
+    videoModal.classList.add('visible'); 
+    return;
+  }
+
+  const isVideo = url.match(/\.(mp4|webm|mov|mkv)(\?.*)?$/i);
+  if (isVideo) {
+    modalVideo.src = url;
+    modalVideo.style.display = 'block';
+    videoModal.classList.add('visible');
+    return;
+  }
+
+  const isImage = url.includes('cdn.discordapp.com') || url.match(/\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i);
+  if (isImage) {
+    modalImage.src = url;
+    modalImage.style.display = 'block';
+    videoModal.classList.add('visible');
+    return;
+  }
+
+  window.open(url, '_blank');
+}
+
+function closeVideoModal() { 
+  videoModal.classList.remove('visible'); 
+  setTimeout(() => { 
+    youtubeFrame.src = ""; 
+    modalImage.src = "";
+    modalVideo.pause(); 
+    modalVideo.src = "";
+  }, 300); 
+}
+
+startLoadingProcess();
+</script>
+
+</body></html>
