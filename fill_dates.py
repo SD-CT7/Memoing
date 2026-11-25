@@ -24,8 +24,15 @@ for path in sheets:
     key = by_abbr.get(base) or by_name.get(title)
     if not key:
         warn.append(f"[{path}] コースを特定できません (tab='{base}', title='{title}')"); continue
-    hdr = next(i for i, r in enumerate(data) if "Player" in r and "Time" in r)
-    h = data[hdr]; ci = {n: h.index(n) for n in ("Rank", "Player", "Time", "Date")}
+    norm = lambda x: re.sub(r"\s+", "", x).lower()
+    hdr = next((i for i, r in enumerate(data)
+                if "player" in map(norm, r) and "time" in map(norm, r)), None)
+    if hdr is None:
+        warn.append(f"[{base}] Player/Time の見出し行が見つからない → タブごとスキップ"); continue
+    h = data[hdr]; hn = [norm(x) for x in h]
+    if "date" not in hn:
+        warn.append(f"[{base}] Date 列が無い(見出し: {[x for x in h if x.strip()]}) → タブごとスキップ"); continue
+    ci = {"Player": hn.index("player"), "Time": hn.index("time"), "Date": hn.index("date")}
     seen = Counter()
     for r in data[hdr + 1:]:
         r = r + [""] * (len(h) - len(r))
