@@ -1,0 +1,103 @@
+key,abbr,name,sort_no,image_file,parent_key,active,aliases,is_glitch
+Autumn_Forest,AF,Autumn Forest,5,037_Autumn_Forest,,true,[],false
+Banshee_Boardwalk_2,BB2,Banshee Boardwalk 2,13,045_Banshee_Boardwalk_2,,true,[],false
+Big_Blue,BB,Big Blue,46,078_Big_Blue,,true,[],false
+Bingo_Party,BP,Bingo Party,48,080_Bingo_Party,,true,[],false
+Block_Island,BI,Block Island,58,090_Block_Island,,true,[],false
+Breezechill_Citadel,BC,Breezechill Citadel,84,116_Breezechill_Citadel,,true,[],false
+Castle_of_Time,CoT,Castle of Time,20,052_Castle_of_Time,,true,[],false
+Cliffside_Circuit,CCi,Cliffside Circuit,70,102_Cliffside_Circuit,,true,[],false
+Concord_Town,CT,Concord Town,1,033_Concord_Town,,true,[],false
+Coral_Cape,CoC,Coral Cape,81,113_Coral_Cape,,true,[],false
+CTR_Cortex_Castle,CCa,CTR Cortex Castle,25,057_CTR_Cortex_Castle,,true,[],false
+CTR_Crash_Cove,CCo,CTR Crash Cove,24,056_CTR_Crash_Cove,,true,[],false
+Dark_Matter_Fortress,DMF,Dark Matter Fortress,72,104_Dark_Matter_Fortress,,true,[],false
+Dark_Sanctuary,DS,Dark Sanctuary,85,117_Dark_Sanctuary,,true,[],false
+Dark_Star_Castle,DSC,Dark Star Castle,88,120_Dark_Star_Castle,,true,[],false
+DKR_Jungle_Falls,JF,DKR Jungle Falls,60,092_DKR_Jungle_Falls,,true,[],false
+DKR_Star_City,SC,DKR Star City,55,087_DKR_Star_City,,true,[],false
+Doge_Desert,DD,Doge Desert,89,121_Doge_Desert,,true,[],false
+Dragon_Burial_Grounds,DBG,Dragon Burial Grounds,64,096_Dragon_Burial_Grounds,,true,[],false
+DS_Bowser_Castle,DS BC,DS Bowser Castle,59,091_DS_Bowser_Castle,,true,[],false
+DS_Cheep_Cheep_Beach,DS CCB,DS Cheep Cheep Beach,16,048_DS_Cheep_Cheep_Beach,,true,[],false
+DS_Delfino_Square,DS DS,DS Delfino Square,11,043_DS_Delfino_Square,,true,[],false
+DS_Desert_Hills,DS DH,DS Desert Hills,19,051_DS_Desert_Hills,,true,[],false
+DS_Peach_Gardens,DS PG,DS Peach Gardens,83,115_DS_Peach_Gardens,,true,[],false
+DS_Rainbow_Road,DS RR,DS Rainbow Road,80,112_DS_Rainbow_Road,,true,[],false
+DS_Shroom_Ridge,DS SR,DS Shroom Ridge,23,055_DS_Shroom_Ridge,,true,[],false
+DS_Tick_Tock_Clock,DS TTC,DS Tick Tock Clock,17,049_DS_Tick_Tock_Clock,,true,[],false
+DS_Wario_Stadium,DS WS,DS Wario Stadium,41,073_DS_Wario_Stadium,,true,[],false
+DS_Yoshi_Falls,DS YF,DS Yoshi Falls,21,053_DS_Yoshi_Falls,,true,[],false
+Elemental_Cave,ECa,Elemental Cave,14,046_Elemental_Cave,,true,[],false
+Ermii_Circuit,ECi,Ermii Circuit,42,074_Ermii_Circuit,,true,[],false
+Flowerbed_Fortress,FF,Flowerbed Fortress,53,085_Flowerbed_Fortress,,true,[],false
+Frosty_Heights,FH,Frosty Heights,67,099_Frosty_Heights,,true,[],false
+Frozen_Grotto,FG,Frozen Grotto,62,094_Frozen_Grotto,,true,[],false
+Galvarny_Falls,GF,Galvarny Falls,3,035_Galvarny_Falls,,true,[],false
+GBA_Bowser_Castle_3,GBA BC3,GBA Bowser Castle 3,8,040_GBA_Bowser_Castle_3,,true,[],false
+GBA_Bowser_Castle_3_G,GBA BC3 G,GBA Bowser Castle 3 (Glitch),8,,GBA_Bowser_Castle_3,true,[],true
+GBA_Bowser_Castle_4,GBA BC4,GBA Bowser Castle 4,38,070_GBA_Bowser_Castle_4,,true,[],false
+GBA_Bowser_Castle_4_G,GBA BC4 G,GBA Bowser Castle 4 (Glitch),38,,GBA_Bowser_Castle_4,true,[],true
+GBA_Broken_Pier,GBA BP,GBA Broken Pier,51,083_GBA_Broken_Pier,,true,[],false
+GBA_Lakeside_Park,GBA LP,GBA Lakeside Park,63,095_GBA_Lakeside_Park,,true,[],false
+GBA_Luigi_Circuit,GBA LC,GBA Luigi Circuit,36,068_GBA_Luigi_Circuit,,true,[],false
+GBA_Peach_Circuit,GBA PC,GBA Peach Circuit,34,066_GBA_Peach_Circuit,,true,[],false
+GBA_Rainbow_Road,GBA RR,GBA Rainbow Road,94,126_GBA_Rainbow_Road,,true,[],false
+GBA_Riverside_Park,GBA RP,GBA Riverside Park,6,038_GBA_Riverside_Park,,true,[],false
+GBA_Shy_Guy_Beach,GBA SGB,GBA Shy Guy Beach,47,079_GBA_Shy_Guy_Beach,,true,[],false
+GBA_Sky_Garden,GBA SG,GBA Sky Garden,4,036_GBA_Sky_Garden,,true,[],false
+GCN_Baby_Park,GCN BP,GCN Baby Park,43,075_GCN_Baby_Park,,true,[],false
+GCN_Bowser_Castle,GCN BC,GCN Bowser Castle,44,076_GCN_Bowser_Castle,,true,[],false
+GCN_Luigi_Circuit,GCN LC,GCN Luigi Circuit,31,063_GCN_Luigi_Circuit,,true,[],false
+GCN_Mario_Circuit,GCN MaC,GCN Mario Circuit,12,044_GCN_Mario_Circuit,,true,[],false
+GCN_Mushroom_Bridge,GCN MB,GCN Mushroom Bridge,18,050_GCN_Mushroom_Bridge,,true,[],false
+GCN_Mushroom_City,GCN MuC,GCN Mushroom City,87,119_GCN_Mushroom_City,,true,[],false
+GCN_Mushroom_City_G,GCN MuC G,GCN Mushroom City (Glitch),87,,GCN_Mushroom_City,true,[],true
+GCN_Yoshi_Circuit,GCN YC,GCN Yoshi Circuit,33,065_GCN_Yoshi_Circuit,,true,[],false
+Glacier_Mine,GM,Glacier Mine,52,084_Glacier_Mine,,true,[],false
+Gnasty_Gnorc's_Lair,GGL,Gnasty Gnorc's Lair,68,100_Gnasty_Gnorc's_Lair,,true,[],false
+Hell_Pyramid,HP,Hell Pyramid,86,118_Hell_Pyramid,,true,[],false
+Interstellar_Laboratory,IL,Interstellar Laboratory,71,103_Interstellar_Laboratory,,true,[],false
+Jungle_Ruins,JR,Jungle Ruins,30,062_Jungle_Ruins,,true,[],false
+Metro_Madness,MMa,Metro Madness,35,067_Metro_Madness,,true,[],false
+Metro_Madness_G,MMa G,Metro Madness (Glitch),35,,Metro_Madness,true,[],true
+Miku's_Birthday_Spectacular_2,MBS2,Miku's Birthday Spectacular 2,92,124_Miku's_Birthday_Spectacular_2,,true,[],false
+Mushroom_Mountain,MMo,Mushroom Mountain,56,088_Mushroom_Mountain,,true,[],false
+N64_Banshee_Boardwalk,N64 BB,N64 Banshee Boardwalk,90,122_N64_Banshee_Boardwalk,,true,[],false
+N64_Bowser_Castle,N64 BC,N64 Bowser Castle,75,107_N64_Bowser_Castle,,true,[],false
+N64_Choco_Mountain,N64 CM,N64 Choco Mountain,22,054_N64_Choco_Mountain,,true,[],false
+N64_DK's_Jungle_Parkway,N64 DKJP,N64 DK's Jungle Parkway,91,123_N64_DK's_Jungle_Parkway,,true,[],false
+N64_Frappe_Snowland,N64 FS,N64 Frappe Snowland,9,041_N64_Frappe_Snowland,,true,[],false
+N64_Mario_Raceway,N64 MR,N64 Mario Raceway,2,034_N64_Mario_Raceway,,true,[],false
+N64_Moo_Moo_Farm,N64 MMF,N64 Moo Moo Farm,10,042_N64_Moo_Moo_Farm,,true,[],false
+N64_Rainbow_Road,N64 RR,N64 Rainbow Road,93,125_N64_Rainbow_Road,,true,[],false
+N64_Rainbow_Road_G,N64 RR G,N64 Rainbow Road (Glitch),93,,N64_Rainbow_Road,true,[],true
+N64_Sherbet_Land,N64 SL,N64 Sherbet Land,57,089_N64_Sherbet_Land,,true,[],false
+Neo_Metropolis,NM,Neo Metropolis,66,098_Neo_Metropolis,,true,[],false
+Orbital_Outpost,OO,Orbital Outpost,79,111_Orbital_Outpost,,true,[],false
+Painted_Swamp_Raceway,PSR,Painted Swamp Raceway,77,109_Painted_Swamp_Raceway,,true,[],false
+Rainbow_Road_Deluxe,RRDX,Rainbow Road Deluxe,96,128_Rainbow_Road_Deluxe,,true,[],false
+Retro_Raceway,RRa,Retro Raceway,61,093_Retro_Raceway,,true,[],false
+Revo_Circuit,RC,Revo Circuit,26,058_Revo_Circuit,,true,[],false
+RMX_Donut_Plains_1,RMX DP1,RMX Donut Plains 1,39,071_RMX_Donut_Plains_1,,true,[],false
+RMX_Mario_Circuit_1,RMX MC1,RMX Mario Circuit 1,7,039_RMX_Mario_Circuit_1,,true,[],false
+RMX_Rainbow_Road_1,RMX RR1,RMX Rainbow Road 1,95,127_RMX_Rainbow_Road_1,,true,[],false
+RMX_Vanilla_Lake_1,RMX VL1,RMX Vanilla Lake 1,69,101_RMX_Vanilla_Lake_1,,true,[],false
+Roulette_Road,RRo,Roulette Road,78,110_Roulette_Road,,true,[],false
+Sandcastle_Park,SPar,Sandcastle Park,29,061_Sandcastle_Park,,true,[],false
+Seaside_Palace,SPal,Seaside Palace,54,086_Seaside_Palace,,true,[],false
+Secret_Slide,SSli,Secret Slide,40,072_Secret_Slide,,true,[],false
+SMO_RC_Challenge,RCC,SMO RC Challenge,37,069_SMO_RC_Challenge,,true,[],false
+SNES_Choco_Island_2,SNES CI2,SNES Choco Island 2,27,059_SNES_Choco_Island_2,,true,[],false
+SNES_Donut_Plains_2,SNES DP2,SNES Donut Plains 2,73,105_SNES_Donut_Plains_2,,true,[],false
+SNES_Ghost_Valley_2,SNES GV2,SNES Ghost Valley 2,15,047_SNES_Ghost_Valley_2,,true,[],false
+SNES_Mario_Circuit_3,SNES MC3,SNES Mario Circuit 3,45,077_SNES_Mario_Circuit_3,,true,[],false
+Soaring_Skyway,SSk,Soaring Skyway,74,106_Soaring_Skyway,,true,[],false
+Star_Slope,SSlo,Star Slope,28,060_Star_Slope,,true,[],false
+Stargaze_Summit,SSu,Stargaze Summit,49,081_Stargaze_Summit,,true,[],false
+Sunset_Raceway,SRa,Sunset Raceway,50,082_Sunset_Raceway,,true,[],false
+Volcano_Beach_Ruins,VBR,Volcano Beach Ruins,32,064_Volcano_Beach_Ruins,,true,[],false
+Volcano_Beach_Ruins_G,VBR G,Volcano Beach Ruins (Glitch),32,,Volcano_Beach_Ruins,true,[],true
+Warp_Pipe_Island,WPI,Warp Pipe Island,65,097_Warp_Pipe_Island,,true,[],false
+Wii_DK_Summit,Wii DKS,Wii DK Summit,76,108_Wii_DK_Summit,,true,[],false
+Wii_Wario's_Gold_Mine,Wii WGM,Wii Wario's Gold Mine,82,114_Wii_Wario's_Gold_Mine,,true,[],false
