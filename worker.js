@@ -67,11 +67,17 @@ async function runRefresh(env) {
     throw new Error('必要な環境変数/シークレットが不足しています(SUPABASE_URL / SUPABASE_SERVICE_KEY / DISCORD_BOT_TOKEN)');
   }
 
+  // Flap(flap_times)は times とは独立に更新する。失敗しても times 側の処理は止めない
+  const flapResult = await runFlapRefresh(env).catch((err) => {
+    console.error(`Flap更新失敗: ${err}`);
+    return { error: String(err) };
+  });
+
   const rows = await fetchDiscordRows(SUPABASE_URL, SUPABASE_SERVICE_KEY);
   console.log(`Discord CDNリンクを含む行: ${rows.length}件`);
 
   if (rows.length === 0) {
-    return { checked: 0, uniqueUrls: 0, refreshed: 0, failed: 0 };
+    return { checked: 0, uniqueUrls: 0, refreshed: 0, failed: 0, flap: flapResult };
   }
 
   // 同じURLを複数行が参照していることがあるので、URL単位でまとめる
@@ -155,9 +161,62 @@ async function runRefresh(env) {
     failedBatches,
     sheetSyncStatus,
     errorSamples,
+    flap: flapResult,
   };
   console.log('完了:', JSON.stringify(result));
   return result;
+}
+
+// Flap(flap_times)のDiscord添付リンクを更新する。
+// discord.com/channels/... のようなメッセージリンクは添付URLではないので対象から外す。
+async function runFlapRefresh(env) {
+  const { SUPABASE_URL, SUPABASE_SERVICE_KEY, DISCORD_BOT_TOKEN } = env;
+  const base = SUPABASE_URL.replace(/\/+$/, '');
+  const filter = encodeURIComponent('(video_url.ilike.*cdn.discordapp.com*,video_url.ilike.*media.discordapp.net*)');
+  const res = await fetch(`${base}/rest/v1/flap_times?select=id,video_url&or=${filter}`, {
+    headers: { apikey: SUPABASE_SERVICE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_KEY}` },
+  });
+  if (!res.ok) throw new Error(`Flap取得失敗: ${res.status} ${await res.text()}`);
+  const rows = await res.json();
+  if (rows.length === 0) return { checked: 0, refreshed: 0 };
+
+  const urlToIds = new Map();
+  for (const r of rows) {
+    if (!urlToIds.has(r.video_url)) urlToIds.set(r.video_url, []);
+    urlToIds.get(r.video_url).push(r.id);
+  }
+  const urls = [...urlToIds.keys()];
+  const updates = [];
+  let failedBatches = 0;
+
+  for (let i = 0; i < urls.length; i += DISCORD_BATCH_SIZE) {
+    const batch = urls.slice(i, i + DISCORD_BATCH_SIZE);
+    try {
+      const pairs = await refreshBatch(batch, DISCORD_BOT_TOKEN);
+      for (const { original, refreshed } of pairs) {
+        if (!refreshed || refreshed === original) continue;
+        for (const id of urlToIds.get(original) || []) updates.push({ id, video: refreshed });
+      }
+    } catch (err) {
+      console.error(`Flapバッチ ${i / DISCORD_BATCH_SIZE + 1} でエラー: ${err}`);
+      failedBatches++;
+    }
+    if (i + DISCORD_BATCH_SIZE < urls.length) await sleep(500);
+  }
+
+  if (updates.length > 0) {
+    const r = await fetch(`${base}/rest/v1/rpc/bulk_update_flap_video_urls`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_SERVICE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ updates }),
+    });
+    if (!r.ok) throw new Error(`Flap一括更新失敗: ${r.status} ${await r.text()}`);
+  }
+  return { checked: rows.length, refreshed: updates.length, failedBatches };
 }
 
 // Supabaseから video列にdiscordの文字列を含む行を取得(id, videoのみ)
