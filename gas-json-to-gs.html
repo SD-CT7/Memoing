@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GAS JSON → .gs 変換ツール（プロキシ対応）</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --surface: #161b22;
+      --border: #30363d;
+      --text: #e6edf3;
+      --muted: #8b949e;
+      --accent: #58a6ff;
+      --green: #238636;
+      --green-hover: #2ea043;
+      --red: #da3633;
+      --yellow: #d29922;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 24px;
+      min-height: 100vh;
+    }
+    .container { max-width: 960px; margin: 0 auto; }
+    h1 {
+      font-size: 1.55rem;
+      color: var(--accent);
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: 0.95rem;
+      margin-bottom: 24px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 18px;
+    }
+    .card h2 {
+      font-size: 1.08rem;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+    .card h3 {
+      font-size: 0.95rem;
+      margin: 16px 0 8px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    input[type="text"], textarea {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text);
+      padding: 11px 12px;
+      font-family: "Cascadia Code", Consolas, monospace;
+      font-size: 0.88rem;
+    }
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    button, .btn {
+      background: var(--green);
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.93rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.15s;
+      text-decoration: none;
+    }
+    button:hover, .btn:hover { background: var(--green-hover); }
+    button.secondary, .btn.secondary {
+      background: #21262d;
+      border: 1px solid var(--border);
+    }
+    button.secondary:hover, .btn.secondary:hover { background: #30363d; }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 12px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .status.error { color: var(--red); }
+    .status.success { color: #3fb950; }
+    .status.warn { color: var(--yellow); }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 28px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-bottom: 12px;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent);
+      background: rgba(88, 166, 255, 0.06);
+    }
+    .drop-zone p { color: var(--muted); margin-top: 6px; font-size: 0.88rem; }
+    .drop-zone strong { color: var(--accent); }
+    input[type="file"] { display: none; }
+
+    .file-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .file-info { flex: 1; min-width: 200px; }
+    .file-name {
+      font-weight: 600;
+      color: var(--accent);
+      word-break: break-all;
+    }
+    .file-meta {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    .file-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .preview-toggle {
+      font-size: 0.85rem;
+      color: var(--muted);
+      cursor: pointer;
+      margin-top: 8px;
+      user-select: none;
+    }
+    .preview-toggle:hover { color: var(--accent); }
+    pre.preview {
+      display: none;
+      margin-top: 10px;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 0.8rem;
+      max-height: 280px;
+      overflow: auto;
+      white-space: pre;
+      width: 100%;
+    }
+    pre.preview.show { display: block; }
+    .count-badge {
+      display: inline-block;
+      background: rgba(88, 166, 255, 0.15);
+      color: var(--accent);
+      font-size: 0.8rem;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-left: 8px;
+    }
+    .hint {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .steps {
+      background: rgba(88, 166, 255, 0.07);
+      border: 1px solid rgba(88, 166, 255, 0.22);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin-bottom: 14px;
+      font-size: 0.88rem;
+    }
+    .steps ol {
+      margin: 8px 0 0 18px;
+      color: var(--muted);
+    }
+    .steps li { margin-bottom: 4px; }
+    .steps strong { color: var(--text); }
+    code {
+      background: var(--bg);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.84rem;
+    }
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .tab {
+      padding: 8px 14px;
+      cursor: pointer;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+      background: none;
+      border-radius: 0;
+      font-size: 0.92rem;
+    }
+    .tab:hover { color: var(--text); background: none; }
+    .tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+      background: none;
+    }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .saved-proxy {
+      font-size: 0.82rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>GAS JSON → .gs 変換ツール</h1>
+    <p class="subtitle">プロキシ経由で Apps Script プロジェクトを取得し、<code>.gs</code> / <code>.html</code> を ZIP 化します</p>
+
+    <!-- ========== メイン: プロキシ経由 ========== -->
+    <div class="card">
+      <h2>1. プロキシ経由で取得（推奨）</h2>
+
+      <div class="steps">
+        <strong>初回セットアップ（1回だけ）</strong>
+        <ol>
+          <li>下の「プロキシ用GASコードを表示」を開き、コードをコピー</li>
+          <li><a href="https://script.google.com" target="_blank" style="color:var(--accent)">script.google.com</a> で新規プロジェクトを作成し、貼り付けて保存</li>
+          <li>関数 <code>forceOAuthScopes_</code> を一度実行して権限を承認</li>
+          <li>「デプロイ」→「新しいデプロイ」→ 種類: <strong>ウェブアプリ</strong></li>
+          <li>実行ユーザー: 自分 ／ アクセスできるユーザー: <strong>全員</strong>（推奨）</li>
+          <li>表示されたウェブアプリURLを下の「プロキシURL」に貼る</li>
+        </ol>
+      </div>
+
+      <label class="hint">プロキシURL（ウェブアプリのURL）</label>
+      <input type="text" id="proxyUrlInput" placeholder="https://script.google.com/macros/s/AKfycb.../exec" style="margin-top:4px;">
+      <div class="saved-proxy" id="savedProxyHint"></div>
+
+      <h3>プロジェクトURL または ID</h3>
+      <input type="text" id="projectInput" placeholder="https://script.google.com/home/projects/1Z_jFd0c.../edit  または  プロジェクトID">
+      <p class="hint" style="margin-top:6px;">
+        例: <code>https://script.google.com/home/projects/1Z_jFd0cJ60LwqCm9MEzfcsBqYGpnQqHgdPwnynGIdH9JbPZV8RZtCQMF/edit</code>
+      </p>
+
+      <div class="btn-row">
+        <button id="fetchBtn">⬇ プロキシ経由で取得して変換</button>
+        <button id="showCodeBtn" class="secondary">📄 プロキシ用GASコードを表示</button>
+        <button id="clearBtn" class="secondary">クリア</button>
+      </div>
+      <div id="status" class="status"></div>
+
+      <pre id="proxyCodeBox" class="preview" style="max-height:480px; margin-top:14px;"></pre>
+    </div>
+
+    <!-- ========== 結果 ========== -->
+    <div class="card" id="resultsCard" style="display:none;">
+      <h2>
+        2. 抽出結果
+        <span class="count-badge" id="countBadge">0</span>
+      </h2>
+      <div class="btn-row" style="margin-bottom:14px;">
+        <button id="downloadAllBtn" disabled>⬇ すべてを ZIP でダウンロード</button>
+      </div>
+      <div id="resultsList"></div>
+    </div>
+
+    <!-- ========== 代替: 手動 ========== -->
+    <div class="card">
+      <h2>代替: 手動でJSONを読み込む</h2>
+      <p class="hint" style="margin-bottom:12px;">プロキシが使えない場合は、エクスポートURLを開いてJSONをコピーするか、ファイルをドロップしてください。</p>
+
+      <div class="tabs">
+        <button class="tab active" data-tab="manual-url">URL生成</button>
+        <button class="tab" data-tab="manual-paste">貼り付け</button>
+        <button class="tab" data-tab="manual-file">ファイル</button>
+      </div>
+
+      <div class="tab-panel active" id="tab-manual-url">
+        <input type="text" id="manualProjectInput" placeholder="プロジェクトURL または ID">
+        <div class="btn-row">
+          <button id="genExportBtn" class="secondary">🔗 エクスポートURLを生成</button>
+          <a id="openExportLink" class="btn secondary" href="#" target="_blank" style="display:none;">↗ 新しいタブで開く</a>
+        </div>
+        <div id="exportUrlResult" class="hint" style="margin-top:10px; word-break:break-all;"></div>
+      </div>
+
+      <div class="tab-panel" id="tab-manual-paste">
+        <textarea id="pasteArea" placeholder='{"files":[{"name":"...","type":"server_js","source":"..."}]}'></textarea>
+        <div class="btn-row">
+          <button id="processPasteBtn">🔄 貼り付けたJSONを変換</button>
+        </div>
+      </div>
+
+      <div class="tab-panel" id="tab-manual-file">
+        <div class="drop-zone" id="dropZone">
+          <div style="font-size:1.8rem;">📂</div>
+          <p><strong>クリック</strong> または <strong>ドラッグ＆ドロップ</strong></p>
+          <input type="file" id="fileInput" accept=".json,application/json" multiple>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========== DOM ==========
+    const proxyUrlInput = document.getElementById('proxyUrlInput');
+    const projectInput = document.getElementById('projectInput');
+    const fetchBtn = document.getElementById('fetchBtn');
+    const showCodeBtn = document.getElementById('showCodeBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const statusEl = document.getElementById('status');
+    const proxyCodeBox = document.getElementById('proxyCodeBox');
+    const savedProxyHint = document.getElementById('savedProxyHint');
+
+    const resultsCard = document.getElementById('resultsCard');
+    const resultsList = document.getElementById('resultsList');
+    const countBadge = document.getElementById('countBadge');
+    const downloadAllBtn = document.getElementById('downloadAllBtn');
+
+    const manualProjectInput = document.getElementById('manualProjectInput');
+    const genExportBtn = document.getElementById('genExportBtn');
+    const openExportLink = document.getElementById('openExportLink');
+    const exportUrlResult = document.getElementById('exportUrlResult');
+    const pasteArea = document.getElementById('pasteArea');
+    const processPasteBtn = document.getElementById('processPasteBtn');
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+
+    let extractedFiles = [];
+
+    // プロキシURLを localStorage に保存
+    const LS_KEY = 'gas_export_proxy_url';
+    (function loadSavedProxy() {
+      const saved = localStorage.getItem(LS_KEY);
+      if (saved) {
+        proxyUrlInput.value = saved;
+        savedProxyHint.textContent = '保存済みのプロキシURLを読み込みました';
+      }
+    })();
+    proxyUrlInput.addEventListener('change', () => {
+      const v = proxyUrlInput.value.trim();
+      if (v) {
+        localStorage.setItem(LS_KEY, v);
+        savedProxyHint.textContent = 'プロキシURLを保存しました';
+      }
+    });
+
+    // ========== プロキシ用 GAS コード ==========
+    const PROXY_CODE = `/**
+ * ============================================================
+ *  GAS JSON エクスポート プロキシ
+ * ============================================================
+ *
+ * 【デプロイ手順】
+ * 1. https://script.google.com で「新しいプロジェクト」を作成
+ * 2. このコードをすべて貼り付けて保存
+ * 3. 初回は forceOAuthScopes_() を一度実行して権限を承認
+ * 4. 「デプロイ」→「新しいデプロイ」
+ *    - 種類の選択: ウェブアプリ
+ *    - 実行ユーザー: 自分
+ *    - アクセスできるユーザー: 全員（推奨）
+ * 5. 表示されたウェブアプリURLを変換ツールに貼る
+ *
+ * 【呼び出し】
+ *   GET  ?id=PROJECT_ID
+ *   POST {"id":"PROJECT_ID"}
+ */
+
+function doGet(e) {
+  const id = (e && e.parameter && e.parameter.id) ? e.parameter.id.trim() : '';
+  return handleRequest_(id);
+}
+
+function doPost(e) {
+  let id = '';
+  try {
+    if (e && e.postData && e.postData.contents) {
+      const body = JSON.parse(e.postData.contents);
+      id = (body.id || '').toString().trim();
+    }
+  } catch (_) {}
+  if (!id && e && e.parameter) {
+    id = (e.parameter.id || '').toString().trim();
+  }
+  return handleRequest_(id);
+}
+
+function handleRequest_(projectId) {
+  const out = ContentService.createTextOutput();
+  out.setMimeType(ContentService.MimeType.JSON);
+
+  if (!projectId) {
+    return json_(out, {
+      ok: false,
+      error: 'project id is required. Use ?id=PROJECT_ID or POST {"id":"..."}'
+    });
+  }
+
+  if (!/^[a-zA-Z0-9_-]{10,}$/.test(projectId)) {
+    return json_(out, { ok: false, error: 'invalid project id format' });
+  }
+
+  try {
+    const exportUrl =
+      'https://script.google.com/feeds/download/export?id=' +
+      encodeURIComponent(projectId) +
+      '&format=json';
+
+    const res = UrlFetchApp.fetch(exportUrl, {
+      method: 'get',
+      headers: {
+        Authorization: 'Bearer ' + ScriptApp.getOAuthToken(),
+        Accept: 'application/json'
+      },
+      muteHttpExceptions: true,
+      followRedirects: true
+    });
+
+    const code = res.getResponseCode();
+    const body = res.getContentText();
+
+    if (code !== 200) {
+      return json_(out, {
+        ok: false,
+        error: 'export request failed',
+        status: code,
+        detail: body.slice(0, 800)
+      });
+    }
+
+    let parsed;
+    try {
+      parsed = JSON.parse(body);
+    } catch (parseErr) {
+      return json_(out, {
+        ok: false,
+        error: 'response is not valid JSON',
+        detail: body.slice(0, 300)
+      });
+    }
+
+    if (Array.isArray(parsed.files)) {
+      parsed.ok = true;
+      parsed.projectId = projectId;
+      return json_(out, parsed);
+    }
+
+    return json_(out, { ok: true, projectId: projectId, raw: parsed });
+
+  } catch (err) {
+    return json_(out, { ok: false, error: err.message || String(err) });
+  }
+}
+
+function json_(output, obj) {
+  output.setContent(JSON.stringify(obj));
+  return output;
+}
+
+/**
+ * 初回実行用：必要なOAuthスコープを引き出す
+ * エディタでこの関数を選択して「実行」→ 権限を承認
+ */
+function forceOAuthScopes_() {
+  ScriptApp.getOAuthToken();
+  try { DriveApp.getRootFolder(); } catch (_) {}
+  Logger.log('OAuth scopes are ready. Deploy the web app now.');
+}
+`;
+
+    showCodeBtn.addEventListener('click', () => {
+      if (proxyCodeBox.classList.contains('show')) {
+        proxyCodeBox.classList.remove('show');
+        showCodeBtn.textContent = '📄 プロキシ用GASコードを表示';
+      } else {
+        proxyCodeBox.textContent = PROXY_CODE;
+        proxyCodeBox.classList.add('show');
+        showCodeBtn.textContent = '▲ コードを閉じる';
+      }
+    });
+
+    // ========== メイン取得 ==========
+    fetchBtn.addEventListener('click', async () => {
+      const proxyUrl = proxyUrlInput.value.trim().replace(/\/$/, '');
+      const projectRaw = projectInput.value.trim();
+      const projectId = extractProjectId(projectRaw);
+
+      if (!proxyUrl) {
+        setStatus('プロキシURL（ウェブアプリのURL）を入力してください', 'error');
+        return;
+      }
+      if (!projectId) {
+        setStatus('プロジェクトURL または ID を正しく入力してください', 'error');
+        return;
+      }
+
+      // 保存
+      localStorage.setItem(LS_KEY, proxyUrl);
+
+      setStatus('プロキシ経由で取得中…', '');
+      fetchBtn.disabled = true;
+
+      try {
+        let data = null;
+
+        // まず GET
+        try {
+          const res = await fetch(proxyUrl + '?id=' + encodeURIComponent(projectId), {
+            method: 'GET',
+            redirect: 'follow'
+          });
+          const text = await res.text();
+          data = JSON.parse(text);
+        } catch (getErr) {
+          // GET 失敗時は POST を試す
+          const res = await fetch(proxyUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: projectId }),
+            redirect: 'follow'
+          });
+          const text = await res.text();
+          data = JSON.parse(text);
+        }
+
+        if (!data || data.ok === false) {
+          throw new Error(
+            (data && data.error) || '取得に失敗しました' +
+            (data && data.status ? ' (HTTP ' + data.status + ')' : '') +
+            (data && data.detail ? '\\n' + String(data.detail).slice(0, 200) : '')
+          );
+        }
+
+        // files がある場合
+        const payload = data.files ? data : (data.raw || data);
+        extractedFiles = [];
+        resultsList.innerHTML = '';
+        const count = processJsonData(payload, 'proxy:' + projectId);
+
+        if (count > 0) {
+          setStatus(count + ' 個のファイルを抽出しました', 'success');
+          renderResults();
+        } else {
+          setStatus('有効なコードファイル（server_js / html など）が見つかりませんでした', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        setStatus('取得失敗: ' + err.message, 'error');
+      } finally {
+        fetchBtn.disabled = false;
+      }
+    });
+
+    // Enter で実行
+    projectInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') fetchBtn.click();
+    });
+
+    // ========== 手動系 ==========
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+      });
+    });
+
+    genExportBtn.addEventListener('click', () => {
+      const id = extractProjectId(manualProjectInput.value || projectInput.value);
+      if (!id) {
+        exportUrlResult.textContent = 'プロジェクトIDを抽出できませんでした';
+        exportUrlResult.style.color = 'var(--red)';
+        openExportLink.style.display = 'none';
+        return;
+      }
+      const url = 'https://script.google.com/feeds/download/export?id=' + id + '&format=json';
+      exportUrlResult.innerHTML = '<code>' + url + '</code><br><span class="hint">このURLをブラウザで開き、表示されたJSONをコピーして「貼り付け」タブで変換してください。</span>';
+      exportUrlResult.style.color = '';
+      openExportLink.href = url;
+      openExportLink.style.display = 'inline-flex';
+    });
+
+    processPasteBtn.addEventListener('click', () => {
+      const text = pasteArea.value.trim();
+      if (!text) {
+        setStatus('JSONを貼り付けてください', 'error');
+        return;
+      }
+      try {
+        const data = JSON.parse(text);
+        extractedFiles = [];
+        const count = processJsonData(data, 'pasted.json');
+        if (count > 0) {
+          setStatus(count + ' 個のファイルを抽出しました', 'success');
+          renderResults();
+        } else {
+          setStatus('有効なコードファイルが見つかりませんでした', 'error');
+        }
+      } catch (err) {
+        setStatus('JSON解析エラー: ' + err.message, 'error');
+      }
+    });
+
+    dropZone.addEventListener('click', () => fileInput.click());
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files.length) handleFiles(fileInput.files);
+    });
+
+    clearBtn.addEventListener('click', () => {
+      projectInput.value = '';
+      pasteArea.value = '';
+      fileInput.value = '';
+      extractedFiles = [];
+      resultsList.innerHTML = '';
+      resultsCard.style.display = 'none';
+      setStatus('');
+      exportUrlResult.textContent = '';
+      openExportLink.style.display = 'none';
+    });
+
+    downloadAllBtn.addEventListener('click', downloadAllAsZip);
+
+    // ========== 共通処理 ==========
+    function extractProjectId(input) {
+      if (!input) return null;
+      input = input.trim();
+      if (/^[a-zA-Z0-9_-]{15,}$/.test(input) && !input.includes('/')) return input;
+
+      const patterns = [
+        /script\.google\.com\/home\/projects\/([a-zA-Z0-9_-]+)/,
+        /script\.google\.com\/d\/([a-zA-Z0-9_-]+)/,
+        /[?&]id=([a-zA-Z0-9_-]+)/,
+        /projects\/([a-zA-Z0-9_-]{15,})/
+      ];
+      for (const re of patterns) {
+        const m = input.match(re);
+        if (m) return m[1];
+      }
+      return null;
+    }
+
+    function setStatus(msg, type = '') {
+      statusEl.textContent = msg;
+      statusEl.className = 'status' + (type ? ' ' + type : '');
+    }
+
+    async function handleFiles(fileList) {
+      extractedFiles = [];
+      let successCount = 0;
+      let errorCount = 0;
+      for (const file of fileList) {
+        try {
+          const text = await file.text();
+          const data = JSON.parse(text);
+          successCount += processJsonData(data, file.name);
+        } catch (err) {
+          errorCount++;
+          console.error(file.name, err);
+        }
+      }
+      if (successCount > 0) {
+        setStatus(successCount + ' 個のファイルを抽出しました' +
+          (errorCount ? '（' + errorCount + ' 件エラー）' : ''), 'success');
+        renderResults();
+      } else {
+        setStatus('有効なコードファイルが見つかりませんでした', 'error');
+      }
+    }
+
+    function processJsonData(data, sourceName) {
+      let count = 0;
+      const files = data.files || (Array.isArray(data) ? data : [data]);
+
+      for (const f of files) {
+        const type = (f.type || '').toLowerCase();
+        const isCode =
+          type === 'server_js' || type === 'js' || type === 'html' || type === 'json' ||
+          (!type && f.source && typeof f.source === 'string' &&
+            (f.source.includes('function ') || f.source.includes('const ') ||
+             f.source.trim().startsWith('//') || f.source.trim().startsWith('<')));
+
+        if (!isCode || !f.source) continue;
+
+        let name = (f.name || 'untitled').trim();
+        if (type === 'html' && !/\.html?$/i.test(name)) name += '.html';
+        else if (type === 'json' && !/\.json$/i.test(name)) name += '.json';
+        else if ((type === 'server_js' || type === 'js' || !type) && !/\.(gs|js)$/i.test(name)) name += '.gs';
+
+        name = sanitizeFilename(name);
+
+        let finalName = name;
+        let i = 1;
+        while (extractedFiles.some(ef => ef.name === finalName)) {
+          const base = name.replace(/\.(gs|js|html|json)$/i, '');
+          const ext = (name.match(/\.(gs|js|html|json)$/i) || ['.gs'])[0];
+          finalName = base + '_' + i + ext;
+          i++;
+        }
+
+        extractedFiles.push({
+          name: finalName,
+          content: f.source,
+          originalName: f.name || '',
+          sourceJson: sourceName,
+          type: f.type || 'unknown'
+        });
+        count++;
+      }
+      return count;
+    }
+
+    function sanitizeFilename(name) {
+      return name.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, ' ').trim() || 'untitled.gs';
+    }
+
+    function renderResults() {
+      if (extractedFiles.length === 0) {
+        resultsCard.style.display = 'none';
+        return;
+      }
+      resultsCard.style.display = 'block';
+      countBadge.textContent = extractedFiles.length;
+      downloadAllBtn.disabled = false;
+
+      resultsList.innerHTML = extractedFiles.map((f, idx) =>
+        '<div class="file-item">' +
+          '<div class="file-info">' +
+            '<div class="file-name">' + escapeHtml(f.name) + '</div>' +
+            '<div class="file-meta">' +
+              '元の名前: ' + escapeHtml(f.originalName || '—') + ' ／ ' +
+              '種別: ' + escapeHtml(f.type) + ' ／ ' +
+              '出典: ' + escapeHtml(f.sourceJson) +
+            '</div>' +
+            '<div class="preview-toggle" onclick="togglePreview(' + idx + ')">▶ プレビュー</div>' +
+            '<pre class="preview" id="preview-' + idx + '">' + escapeHtml(f.content) + '</pre>' +
+          '</div>' +
+          '<div class="file-actions">' +
+            '<button class="secondary" onclick="downloadOne(' + idx + ')">⬇ ダウンロード</button>' +
+          '</div>' +
+        '</div>'
+      ).join('');
+    }
+
+    function togglePreview(idx) {
+      const pre = document.getElementById('preview-' + idx);
+      const toggle = pre.previousElementSibling;
+      if (pre.classList.contains('show')) {
+        pre.classList.remove('show');
+        toggle.textContent = '▶ プレビュー';
+      } else {
+        pre.classList.add('show');
+        toggle.textContent = '▼ 閉じる';
+      }
+    }
+
+    function downloadOne(idx) {
+      const f = extractedFiles[idx];
+      const blob = new Blob([f.content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = f.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    async function downloadAllAsZip() {
+      if (extractedFiles.length === 0) return;
+      const zip = new JSZip();
+      for (const f of extractedFiles) zip.file(f.name, f.content);
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'extracted_gs_files.zip';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    window.togglePreview = togglePreview;
+    window.downloadOne = downloadOne;
+  </script>
+</body>
+</html>
